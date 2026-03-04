@@ -148,7 +148,7 @@ namespace CS_483_CSI_477.Pages
                     {
                         Role = "assistant",
                         Content =
-                            $"✅ Loaded PDF: {UploadedPdf.FileName} (Bulletin Year: {bulletinYear}). " +
+                            $" Loaded PDF: {UploadedPdf.FileName} (Bulletin Year: {bulletinYear}). " +
                             $"Extracted {extract.Pages.Count} page(s), {extract.TotalChars:N0} chars. " +
                             $"Parsed {plan.TotalCount} course item(s) (Required: {plan.Required.Count}, Electives: {plan.Electives.Count})." +
                             (string.IsNullOrEmpty(yearWarning) ? "" : $"\n\n⚠️ {yearWarning}"),
@@ -180,6 +180,9 @@ namespace CS_483_CSI_477.Pages
                 Content = userText,
                 Timestamp = DateTime.Now
             });
+
+            // Log chat usage
+            LogChatUsage();
 
             try
             {
@@ -1109,6 +1112,50 @@ namespace CS_483_CSI_477.Pages
             }
 
             return sb.ToString();
+        }
+
+        private void LogChatUsage()
+        {
+            var sid = HttpContext.Session.GetInt32("StudentID");
+            if (!sid.HasValue) return;
+
+            var today = DateTime.Today;
+            var checkSql = @"
+                SELECT LogID, MessageCount 
+                FROM ChatUsageLogs 
+                WHERE StudentID = @sid AND SessionDate = @date";
+
+            var existing = _dbHelper.ExecuteQuery(checkSql, new[]
+            {
+                new MySqlParameter("@sid", MySqlDbType.Int32) { Value = sid.Value },
+                new MySqlParameter("@date", MySqlDbType.Date) { Value = today }
+            }, out var err);
+
+            if (!string.IsNullOrEmpty(err)) return;
+
+            if (existing != null && existing.Rows.Count > 0)
+            {
+                // Update existing log
+                var logId = Convert.ToInt32(existing.Rows[0]["LogID"]);
+                var updateSql = "UPDATE ChatUsageLogs SET MessageCount = MessageCount + 1 WHERE LogID = @logId";
+                _dbHelper.ExecuteNonQuery(updateSql, new[]
+                {
+                    new MySqlParameter("@logId", MySqlDbType.Int32) { Value = logId }
+                }, out _);
+            }
+            else
+            {
+                // Insert new log
+                var insertSql = @"
+                    INSERT INTO ChatUsageLogs (StudentID, MessageCount, SessionDate)
+                    VALUES (@sid, 1, @date)";
+                _dbHelper.ExecuteNonQuery(insertSql, new[]
+                {
+                    new MySqlParameter("@sid", MySqlDbType.Int32) { Value = sid.Value },
+                    new MySqlParameter("@date", MySqlDbType.Date) { Value = today }
+                }, out _);
+            }
+
         }
     }
 }

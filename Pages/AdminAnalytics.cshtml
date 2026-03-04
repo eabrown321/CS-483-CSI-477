@@ -1,0 +1,317 @@
+﻿@page
+@model AdminAnalyticsModel
+@{
+    ViewData["Title"] = "Analytics Dashboard";
+}
+
+<div class="container-fluid mt-4">
+    <h2>Analytics Dashboard</h2>
+
+    <!-- Summary Cards -->
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Total Students</h5>
+                    <h2>@Model.TotalStudents</h2>
+                    <p class="mb-0">@Model.ActiveStudents active</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Total Courses</h5>
+                    <h2>@Model.TotalCourses</h2>
+                    <p class="mb-0">Active courses</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">Average GPA</h5>
+                    <h2>@Model.AverageGpa.ToString("F2")</h2>
+                    <p class="mb-0">All students</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Enrollment Rate</h5>
+                    <h2>@((Model.ActiveStudents * 100.0 / Math.Max(Model.TotalStudents, 1)).ToString("F1"))%</h2>
+                    <p class="mb-0">Active/Total</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mt-3">
+            <div class="card text-white bg-danger">
+                <div class="card-body">
+                    <h5 class="card-title">Chat Messages</h5>
+                    <h2>@Model.TotalChatMessages</h2>
+                    <p class="mb-0">@Model.ActiveChatUsers active users</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mt-3">
+            <div class="card text-white bg-secondary">
+                <div class="card-body">
+                    <h5 class="card-title">Bulletins</h5>
+                    <h2>@Model.TotalBulletins</h2>
+                    <p class="mb-0">Uploaded PDFs</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mt-3">
+            <div class="card text-white bg-dark">
+                <div class="card-body">
+                    <h5 class="card-title">Documents</h5>
+                    <h2>@Model.TotalSupportingDocs</h2>
+                    <p class="mb-0">Supporting files</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enrollment by Major -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Enrollment by Major</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Major</th>
+                        <th>Students</th>
+                        <th>Percentage</th>
+                        <th>Distribution</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.EnrollmentByMajor != null && Model.EnrollmentByMajor.Rows.Count > 0)
+                    {
+                        @foreach (System.Data.DataRow row in Model.EnrollmentByMajor.Rows)
+                        {
+                            var percentage = Convert.ToDecimal(row["Percentage"]);
+                            <tr>
+                                <td>@row["Major"]</td>
+                                <td>@row["StudentCount"]</td>
+                                <td>@percentage.ToString("F1")%</td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-primary" role="progressbar"
+                                             style="width: @percentage%"
+                                             aria-valuenow="@percentage" aria-valuemin="0" aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Popular Courses -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">Most Popular Courses</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Course Code</th>
+                        <th>Course Name</th>
+                        <th>Enrollments</th>
+                        <th>Avg Grade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.PopularCourses != null && Model.PopularCourses.Rows.Count > 0)
+                    {
+                        @foreach (System.Data.DataRow row in Model.PopularCourses.Rows)
+                        {
+                            var avgGrade = row["AverageGrade"] != DBNull.Value
+                            ? Convert.ToDecimal(row["AverageGrade"]).ToString("F2")
+                            : "N/A";
+                            <tr>
+                                <td><strong>@row["CourseCode"]</strong></td>
+                                <td>@row["CourseName"]</td>
+                                <td>@row["EnrollmentCount"]</td>
+                                <td>@avgGrade</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <!-- GPA by Major -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">GPA by Major</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Major</th>
+                                <th>Students</th>
+                                <th>Avg GPA</th>
+                                <th>Range</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.GpaByMajor != null && Model.GpaByMajor.Rows.Count > 0)
+                            {
+                                @foreach (System.Data.DataRow row in Model.GpaByMajor.Rows)
+                                {
+                                    <tr>
+                                        <td>@row["Major"]</td>
+                                        <td>@row["StudentCount"]</td>
+                                        <td><strong>@row["AverageGPA"]</strong></td>
+                                        <td>@row["MinGPA"] - @row["MaxGPA"]</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completion Rates -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">Degree Completion Rates</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Major</th>
+                                <th>Completed</th>
+                                <th>Rate</th>
+                                <th>Avg Credits</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.CompletionRates != null && Model.CompletionRates.Rows.Count > 0)
+                            {
+                                @foreach (System.Data.DataRow row in Model.CompletionRates.Rows)
+                                {
+                                    var rate = Convert.ToDecimal(row["CompletionRate"]);
+                                    <tr>
+                                        <td>@row["Major"]</td>
+                                        <td>@row["CompletedStudents"] / @row["TotalStudents"]</td>
+                                        <td>
+                                            <span class="badge bg-@(rate >= 50 ? "success" : "warning")">
+                                                @rate.ToString("F1")%
+                                            </span>
+                                        </td>
+                                        <td>@row["AvgCreditsEarned"]</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Usage Analytics -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">AI Chat Usage (Last 30 Days)</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Messages</th>
+                        <th>Active Users</th>
+                        <th>Avg Messages/User</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.ChatUsageByDay != null && Model.ChatUsageByDay.Rows.Count > 0)
+                    {
+                        @foreach (System.Data.DataRow row in Model.ChatUsageByDay.Rows)
+                        {
+                            var messages = Convert.ToInt32(row["DailyMessages"]);
+                            var users = Convert.ToInt32(row["DailyUsers"]);
+                            var avg = users > 0 ? (decimal)messages / users : 0;
+                            <tr>
+                                <td>@Convert.ToDateTime(row["SessionDate"]).ToString("MMM dd, yyyy")</td>
+                                <td><strong>@messages</strong></td>
+                                <td>@users</td>
+                                <td>@avg.ToString("F1")</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No chat usage data available</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <!-- Recent File Uploads -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">Recent File Uploads</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>File Name</th>
+                        <th>Upload Date</th>
+                        <th>File Size</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.RecentUploads != null && Model.RecentUploads.Rows.Count > 0)
+                    {
+                        @foreach (System.Data.DataRow row in Model.RecentUploads.Rows)
+                        {
+                            var fileSize = Convert.ToInt64(row["FileSize"]);
+                            var sizeInMB = (fileSize / 1024.0 / 1024.0).ToString("F2");
+                            var type = row["Type"].ToString();
+                            <tr>
+                                <td>
+                                    <span class="badge bg-@(type == "Bulletin" ? "primary" : "secondary")">
+                                        @type
+                                    </span>
+                                </td>
+                                <td>@row["FileName"]</td>
+                                <td>@Convert.ToDateTime(row["UploadDate"]).ToString("MMM dd, yyyy")</td>
+                                <td>@sizeInMB MB</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No recent uploads</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

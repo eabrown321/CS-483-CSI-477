@@ -7,6 +7,12 @@
 <div class="container mt-4">
     <h2>Admin Dashboard</h2>
 
+    <div class="mb-3">
+        <a href="/AdminAnalytics" class="btn btn-primary">
+            View Analytics Dashboard
+        </a>
+    </div>
+
     <!-- DB Connection Status -->
     <div class="alert @(Model.IsConnected ? "alert-success" : "alert-danger") mt-3">
         @if (Model.IsConnected)
