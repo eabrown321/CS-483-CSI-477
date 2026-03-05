@@ -16,7 +16,7 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddSingleton<IChatLogStore, FileChatLogStore>();
 
-// ? PDF + Catalog parsing + Gemini
+// ALL services  
 builder.Services.AddSingleton<PdfService>();
 builder.Services.AddSingleton<PdfRagService>();
 builder.Services.AddSingleton<CourseCatalogService>();
@@ -27,6 +27,7 @@ builder.Services.AddSingleton<GpaCalculatorService>();
 builder.Services.AddSingleton<PlannerCommandService>();
 builder.Services.AddSingleton <ConflictDetectionService>();
 builder.Services.AddSingleton<AuthenticationService>();
+builder.Services.AddSingleton<EmailService>();
 
 builder.Services.AddHttpClient<GeminiService>(client =>
 {
