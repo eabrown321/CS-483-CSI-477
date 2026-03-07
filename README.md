@@ -23,10 +23,20 @@ Senior Software Development Projects - Ai Academic Advisor
     "AllowedExtensions": [ ".pdf", ".docx", ".doc", ".txt" ]
   },
   "Gemini": {
-    "ApiKey": "YOUR_API_KEY_HERE",
     "Model": "gemini-2.5-flash",
+    "FallbackModel": "gemini-2.5-flash-lite",
+    "ApiKey": "YOUR_API_KEY_HERE",
     "ApiBaseUrl": "https://generativelanguage.googleapis.com/v1beta"
   },
+  "Email": {
+    "SmtpHost": "smtp.gmail.com",
+    "SmtpPort": "587",
+    "SmtpUser": "",
+    "SmtpPassword": "",
+    "FromAddress": "noreply@acadadvising.com",
+    "FromName": "AI Academic Advisor"
+  },
+  "AppUrl": "https://localhost:7192",
   "Logging": {
     "LogLevel": {
       "Default": "Information",
@@ -35,6 +45,7 @@ Senior Software Development Projects - Ai Academic Advisor
   },
   "AllowedHosts": "*"
 }
+
 ```
 
 # 3 restore nuGet packages and build project
