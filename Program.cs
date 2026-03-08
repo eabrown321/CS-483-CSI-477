@@ -128,6 +128,7 @@ else
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseStatusCodePagesWithReExecute("/404");
 app.UseRouting();
 app.UseRateLimiter();
 app.UseSession();

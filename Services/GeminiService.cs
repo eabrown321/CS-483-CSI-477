@@ -73,7 +73,7 @@ namespace CS_483_CSI_477.Services
                     temperature = 0.2,
                     topP = 0.9,
                     topK = 40,
-                    maxOutputTokens = 8192,
+                    maxOutputTokens = 2048,
                     candidateCount = 1
                 }
             };
@@ -99,8 +99,23 @@ namespace CS_483_CSI_477.Services
                         _logger.LogInformation("Fallback to {Fallback} succeeded", fallbackModel);
                         return ExtractText(fallbackRespJson);
                     }
+
+                    // Both models rate limited
+                    if (fallbackResp.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                    {
+                        _logger.LogWarning("Both primary and fallback models are rate limited");
+                        return "The AI advisor is temporarily unavailable due to high usage. Please try again in a few minutes. If this persists, the daily request limit may have been reached — try again tomorrow or contact your administrator.";
+                    }
+
                     _logger.LogError("Fallback also failed: {Body}", fallbackRespJson);
                 }
+
+                // Primary rate limited with no fallback difference
+                if (resp.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                {
+                    return "The AI advisor is temporarily unavailable due to high usage. Please try again in a few minutes. If this persists, the daily request limit may have been reached — try again tomorrow or contact your administrator.";
+                }
+
                 _logger.LogError("Gemini error {Status} Body: {Body}", resp.StatusCode, respJson);
                 throw new Exception($"Gemini API error: {resp.StatusCode}");
             }

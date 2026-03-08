@@ -1,7 +1,7 @@
 ﻿@page
 @model LoginModel
 @{
-    ViewData["Title"] = "Login";
+    ViewData["Title"] = "Sign In";
     Layout = null;
 }
 
@@ -10,111 +10,412 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - AI Academic Advisor</title>
+    <title>Sign In · AI Academic Advisor</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="~/css/site.css" />
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--navy);
+        }
+
+        /* ── Hero banner ── */
+        .hero {
+            position: relative;
+            width: 100%;
+            padding: 1.5rem 1.5rem 7rem;
+            text-align: center;
+            overflow: hidden;
+            background: var(--navy);
+        }
+
+            /* Decorative rings */
+            .hero::before {
+                content: '';
+                position: absolute;
+                top: -180px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 700px;
+                height: 700px;
+                border-radius: 50%;
+                border: 1.5px solid rgba(200,146,42,0.12);
+                pointer-events: none;
+            }
+
+            .hero::after {
+                content: '';
+                position: absolute;
+                top: -100px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 500px;
+                height: 500px;
+                border-radius: 50%;
+                border: 1.5px solid rgba(200,146,42,0.08);
+                pointer-events: none;
+            }
+
+        .hero-glow {
+            position: absolute;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 300px;
+            background: radial-gradient(ellipse, rgba(200,146,42,0.22) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-icon-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 88px;
+            height: 88px;
+            border-radius: 24px;
+            background: linear-gradient(135deg, var(--gold) 0%, #e0a830 100%);
+            box-shadow: 0 8px 32px rgba(200,146,42,0.45), 0 2px 8px rgba(0,0,0,0.3);
+            margin: 0 auto 1.75rem;
+            font-size: 2.5rem;
+            color: white;
+        }
+
+        .hero-title {
+            font-family: 'DM Serif Display', serif;
+            color: var(--gold);
+            font-size: clamp(2.25rem, 5vw, 3.5rem);
+            line-height: 1.1;
+            margin-bottom: 1rem;
+            letter-spacing: -0.01em;
+        }
+
+            .hero-title span {
+                color: var(--gold);
+            }
+
+        .hero-sub {
+            color: var(--gold);
+            font-size: 1.05rem;
+            max-width: 460px;
+            margin: 0 auto;
+            line-height: 1.65;
+        }
+
+        /* ── Stats strip ── */
+        .stats-strip {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-top: 2.5rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-item-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--gold);
+            line-height: 1;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        .stat-item-label {
+            font-size: 0.75rem;
+            color: gray;
+            margin-top: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 600;
+        }
+
+        /* ── Form card ── */
+        .form-wrap {
+            position: relative;
+            z-index: 10;
+            margin: -6rem auto 0;
+            max-width: 440px;
+            padding: 0 1.25rem 3rem;
+        }
+
+        .form-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.35), 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        .form-card-title {
+            font-family: 'DM Serif Display', serif;
+            color: var(--navy);
+            font-size: 1.625rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .form-card-sub {
+            color: var(--slate-500);
+            font-size: 0.85rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .field-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--slate-600);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 0.4rem;
+        }
+
+        .field-input {
+            width: 100%;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 0.8rem 1rem;
+            font-size: 0.9rem;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--navy);
+            background: #f8fafc;
+            transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+            outline: none;
+        }
+
+            .field-input:focus {
+                border-color: var(--navy);
+                background: white;
+                box-shadow: 0 0 0 3px rgba(13,34,64,0.09);
+            }
+
+            .field-input::placeholder {
+                color: #adb5c2;
+            }
+
+        .field-row {
+            margin-bottom: 1.25rem;
+        }
+
+        .field-row-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+
+        .forgot-link {
+            font-size: 0.78rem;
+            color: var(--gold);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+            .forgot-link:hover {
+                text-decoration: underline;
+            }
+
+        .submit-btn {
+            width: 100%;
+            background: var(--gold);
+            color: black;
+            border: none;
+            border-radius: 10px;
+            padding: 0.9rem;
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            box-shadow: 0 4px 16px rgba(13,34,64,0.25);
+        }
+
+            .submit-btn:hover {
+                background: #b07d20;
+                box-shadow: 0 6px 24px rgba(13,34,64,0.35);
+                transform: translateY(-1px);
+            }
+
+            .submit-btn:active {
+                transform: translateY(0);
+            }
+
+        .form-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.75rem;
+            color: var(--slate-400);
+        }
+
+        /* ── Features row ── */
+        .features-row {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 1.25rem 3rem;
+            flex-wrap: wrap;
+        }
+
+        .feature-chip {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255,255,255,0.92);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 100px;
+            padding: 0.5rem 1rem;
+            color: #000000;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+            .feature-chip i {
+                color: var(--gold);
+                font-size: 0.85rem;
+            }
+
+        @@media (max-width: 480px) {
+            .hero {
+                padding: 3rem 1rem 5rem;
+            }
+
+            .stats-strip {
+                gap: 1.75rem;
+            }
+
+            .form-card {
+                padding: 1.75rem;
+            }
+
+            .features-row {
+                gap: 0.75rem;
+            }
+        }
+    </style>
 </head>
-<body style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); min-height: 100vh; display: flex; align-items: center;">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-10 col-lg-8">
-                <!-- Hero Section -->
-                <div class="text-center text-white mb-4">
-                    <i class="bi bi-robot" style="font-size: 4rem;"></i>
-                    <h1 class="display-4 fw-bold mt-3">AI Academic Advisor</h1>
-                    <p class="lead">Your personalized degree planning assistant powered by AI</p>
-                </div>
+<body>
 
-                <div class="card shadow-lg border-0" style="border-radius: 20px;">
-                    <div class="card-body p-5">
-                        <div class="row">
-                            <!-- Left: Features -->
-                            <div class="col-md-6 border-end">
-                                <h4 class="mb-4">What You Can Do</h4>
-                                <div class="mb-3">
-                                    <i class="bi bi-bar-chart-line-fill text-primary me-2"></i>
-                                    <strong>Track Your Progress</strong>
-                                    <p class="small text-muted ms-4">Monitor degree completion and requirements</p>
-                                </div>
-                                <div class="mb-3">
-                                    <i class="bi bi-calendar-check-fill text-success me-2"></i>
-                                    <strong>Plan Your Courses</strong>
-                                    <p class="small text-muted ms-4">Organize classes semester by semester</p>
-                                </div>
-                                <div class="mb-3">
-                                    <i class="bi bi-chat-dots-fill text-info me-2"></i>
-                                    <strong>Get AI Guidance</strong>
-                                    <p class="small text-muted ms-4">Ask questions about courses and requirements</p>
-                                </div>
-                            </div>
+    <!-- Hero -->
+    <div class="hero">
+        <div class="hero-glow" aria-hidden="true"></div>
 
-                            <!-- Right: Login Form -->
-                            <div class="col-md-6">
-                                <h4 class="mb-4">Login</h4>
+        <div class="hero-icon-wrap" aria-hidden="true">
+            <i class="bi bi-mortarboard-fill"></i>
+        </div>
 
-                                @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-                                {
-                                    <div class="alert alert-danger">
-                                        <i class="bi bi-exclamation-triangle me-2"></i>@Model.ErrorMessage
-                                    </div>
-                                }
+        <h1 class="hero-title">
+            AI Academic<br><span>Advisor</span>
+        </h1>
+        <p class="hero-sub">
+            Personalized degree planning, course guidance, and AI-powered advising — all in one place.
+        </p>
 
-                                <form method="post">
-                                    <div class="mb-3">
-                                        <label asp-for="StudentID" class="form-label">
-                                            <i class="bi bi-person-badge me-1"></i>Student ID or Username
-                                        </label>
-                                        <input asp-for="StudentID"
-                                               class="form-control form-control-lg"
-                                               placeholder="Enter your Student ID or username"
-                                               autofocus />
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label asp-for="Password" class="form-label">
-                                            <i class="bi bi-lock me-1"></i>Password
-                                        </label>
-                                        <input asp-for="Password"
-                                               type="password"
-                                               class="form-control form-control-lg"
-                                               placeholder="Enter your password" />
-                                    </div>
-
-                                    <div class="mb-4 text-end">
-                                        <a href="/ForgotPassword" class="text-primary">Forgot Password?</a>
-                                    </div>
-
-                                    <button type="submit"
-                                            class="btn btn-primary btn-lg w-100"
-                                            style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);">
-                                        <i class="bi bi-box-arrow-in-right me-2"></i>Login
-                                    </button>
-                                </form>
-
-                                <div class="text-center mt-4">
-                                    <small class="text-muted">
-                                        <i class="bi bi-shield-check me-1"></i>
-                                        Your session is secure and private
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Demo Credentials -->
-                <div class="text-center mt-4 text-white">
-                    <small>
-                        <i class="bi bi-info-circle me-1"></i>
-                        <strong>Demo:</strong> Student ID: 1 / Password: password123 | Admin: admin / admin123
-                    </small>
-                </div>
+        <div class="stats-strip" aria-hidden="true">
+            <div class="stat-item">
+                <div class="stat-item-value">AI</div>
+                <div class="stat-item-label">Powered</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-item-value">24/7</div>
+                <div class="stat-item-label">Available</div>
             </div>
         </div>
     </div>
+
+    <!-- Form -->
+    <div class="form-wrap">
+        <div class="form-card">
+            <h2 class="form-card-title">Sign in</h2>
+            <p class="form-card-sub">Enter your credentials to access your advisor</p>
+
+            @if (TempData["RegisterSuccess"] != null)
+            {
+                <div class="alert alert-success mb-3" style="border-radius:10px; font-size:0.875rem;">
+                    <i class="bi bi-check-circle-fill me-2"></i>@TempData["RegisterSuccess"]
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+            {
+                <div class="alert alert-danger mb-3" role="alert" style="font-size:0.875rem; border-radius:10px;">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>@Model.ErrorMessage
+                </div>
+            }
+
+            <form method="post" autocomplete="on">
+                <div class="field-row">
+                    <label class="field-label" for="StudentID">Student ID or Username</label>
+                    <input asp-for="StudentID"
+                           id="StudentID"
+                           class="field-input"
+                           placeholder="Enter your Student ID or username"
+                           autofocus
+                           autocomplete="username" />
+                </div>
+
+                <div class="field-row">
+                    <div class="field-row-header">
+                        <label class="field-label mb-0" for="Password">Password</label>
+                        <a href="/ForgotPassword" class="forgot-link">Forgot password?</a>
+                    </div>
+                    <input asp-for="Password"
+                           id="Password"
+                           type="password"
+                           class="field-input"
+                           placeholder="Enter your password"
+                           autocomplete="current-password" />
+                </div>
+
+                <button type="submit" class="submit-btn">
+                    <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+                    Sign In
+                </button>
+            </form>
+
+            <div class="form-footer">
+                <i class="bi bi-shield-check me-1" aria-hidden="true"></i>
+                Your session is secure and private
+            </div>
+            <div class="form-footer mt-2">
+                New student? <a href="/Register" style="color:var(--gold); font-weight:600;">Create an account</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature chips -->
+    <div class="features-row" aria-hidden="true">
+        <div class="feature-chip">
+            <i class="bi bi-robot"></i> AI Advising
+        </div>
+        <div class="feature-chip">
+            <i class="bi bi-bar-chart-line-fill"></i> Degree Tracking
+        </div>
+        <div class="feature-chip">
+            <i class="bi bi-calendar3"></i> Course Planner
+        </div>
+        <div class="feature-chip">
+            <i class="bi bi-shield-check"></i> Secure & Private
+        </div>
+    </div>
+
 </body>
 </html>

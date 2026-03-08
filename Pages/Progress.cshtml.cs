@@ -9,7 +9,6 @@ namespace CS_483_CSI_477.Pages
     {
         private readonly DatabaseHelper _dbHelper;
 
-        // Overall progress
         public string StudentName { get; set; } = string.Empty;
         public string Major { get; set; } = string.Empty;
         public decimal CurrentGPA { get; set; }
@@ -17,23 +16,53 @@ namespace CS_483_CSI_477.Pages
         public int TotalCreditsRequired { get; set; } = 120;
         public int CompletionPercentage { get; set; }
 
-        // Course history
         public DataTable? CompletedCourses { get; set; }
 
-        // Requirement breakdown
-        public int BusinessCoreCredits { get; set; }
-        public int CISCoreCredits { get; set; }
+        public string CoreRequirement1Label { get; set; } = "CS Core Requirements";
+        public int CoreRequirement1Credits { get; set; }
+        public int CoreRequirement1Required { get; set; } = 40;
+
+        public string CoreRequirement2Label { get; set; } = "Advanced CS Courses";
+        public int CoreRequirement2Credits { get; set; }
+        public int CoreRequirement2Required { get; set; } = 12;
+
         public int ElectiveCredits { get; set; }
         public int Core39Credits { get; set; }
 
-        // Dynamic labels for different majors
-        public string CoreRequirement1Label { get; set; } = "Business Core";
-        public int CoreRequirement1Credits { get; set; }
-        public int CoreRequirement1Required { get; set; } = 34;
-
-        public string CoreRequirement2Label { get; set; } = "CIS Core";
-        public int CoreRequirement2Credits { get; set; }
-        public int CoreRequirement2Required { get; set; } = 12;
+        // Core 39 eligible course codes
+        private static readonly HashSet<string> Core39CourseCodes = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // English Composition (6 cr)
+            "ENG 101", "ENG 201",
+            // Oral Communication (3 cr)
+            "CMST 101", "CMST 201", "CMST 102",
+            // Mathematics (3 cr)
+            "MATH 111", "MATH 114", "MATH 115", "MATH 215", "MATH 230",
+            // Natural Sciences (6 cr)
+            "PHYS 101", "PHYS 201", "PHYS 202", "PHYS 301",
+            "BIOL 101", "BIOL 121", "BIOL 201",
+            "CHEM 101", "CHEM 111", "CHEM 112",
+            "GEOL 101", "GEOL 111",
+            // Social & Behavioral Sciences (9 cr)
+            "ECON 175", "ECON 208", "ECON 209",
+            "SOC 121", "SOC 201",
+            "PSYC 201", "PSYC 101", "PSY 201",
+            "POLS 101", "POLS 201",
+            "ANTH 121", "ANTH 201",
+            // Arts & Humanities (9 cr)
+            "HIST 101", "HIST 102", "HIST 201", "HIST 202",
+            "PHIL 101", "PHIL 201",
+            "ART 101", "ART 201",
+            "MUS 101", "MUS 201",
+            "THTR 101", "THTR 201",
+            "ENG 105", "ENG 185", "ENG 205",
+            "GEOG 101",
+            // Macroeconomics requirement
+            "ECON 209",
+            // Embedded / BS Skills
+            "BCOM 231", "MNGT 452",
+            "ECON 241"
+        };
 
         public ProgressModel(DatabaseHelper dbHelper)
         {
@@ -42,21 +71,17 @@ namespace CS_483_CSI_477.Pages
 
         public IActionResult OnGet()
         {
-            // Redirect to login if not authenticated
             if (!HttpContext.Session.GetInt32("StudentID").HasValue)
-            {
                 return RedirectToPage("/Login");
-            }
 
             LoadStudentProgress();
-            LoadCompletedCourses();
+            LoadAllCourses();
             LoadRequirementBreakdown();
             return Page();
         }
 
         private void LoadStudentProgress()
         {
-            // Get logged-in student ID from session
             int studentId = HttpContext.Session.GetInt32("StudentID") ?? 0;
 
             string query = $@"
@@ -89,9 +114,8 @@ namespace CS_483_CSI_477.Pages
             }
         }
 
-        private void LoadCompletedCourses()
+        private void LoadAllCourses()
         {
-            // Get logged-in student ID from session
             int studentId = HttpContext.Session.GetInt32("StudentID") ?? 0;
 
             string query = $@"
@@ -101,22 +125,23 @@ namespace CS_483_CSI_477.Pages
                     c.CreditHours,
                     sch.Grade,
                     sch.Term,
-                    sch.AcademicYear
+                    sch.AcademicYear,
+                    sch.Status
                 FROM StudentCourseHistory sch
                 JOIN Courses c ON sch.CourseID = c.CourseID
                 WHERE sch.StudentID = {studentId}
-                  AND sch.Status = 'Completed'
-                ORDER BY sch.AcademicYear DESC, sch.Term DESC";
+                ORDER BY 
+                    sch.AcademicYear ASC,
+                    FIELD(sch.Term, 'Spring', 'Summer', 'Fall') ASC,
+                    sch.Status ASC";
 
             CompletedCourses = _dbHelper.ExecuteQuery(query, out _);
         }
 
         private void LoadRequirementBreakdown()
         {
-            // Get logged-in student ID from session
             int studentId = HttpContext.Session.GetInt32("StudentID") ?? 0;
 
-            // Get the student's degree program
             string degreeQuery = $@"
                 SELECT dp.DegreeID, dp.DegreeCode
                 FROM Students s
@@ -124,14 +149,12 @@ namespace CS_483_CSI_477.Pages
                 WHERE s.StudentID = {studentId}";
 
             var degreeResult = _dbHelper.ExecuteQuery(degreeQuery, out _);
-
-            if (degreeResult == null || degreeResult.Rows.Count == 0)
-                return;
+            if (degreeResult == null || degreeResult.Rows.Count == 0) return;
 
             int degreeId = int.Parse(degreeResult.Rows[0]["DegreeID"].ToString()!);
             string degreeCode = degreeResult.Rows[0]["DegreeCode"].ToString()!;
 
-            // Calculate credits by category
+            // Requirement breakdown - completed only
             string breakdownQuery = $@"
                 SELECT 
                     dr.RequirementCategory,
@@ -153,65 +176,50 @@ namespace CS_483_CSI_477.Pages
                     string category = row["RequirementCategory"].ToString() ?? "";
                     int credits = int.Parse(row["EarnedCredits"].ToString() ?? "0");
 
-                    // For CIS majors
-                    if (degreeCode == "CIS-BS")
+                    if (degreeCode == "CS-BS")
                     {
-                        if (category.Contains("Business Core"))
-                            BusinessCoreCredits += credits;
-                        else if (category.Contains("CIS Core"))
-                            CISCoreCredits += credits;
-                        else if (category.Contains("Track") || category.Contains("Elective"))
+                        if (category.Contains("CS Core") || category.Contains("Hardware") ||
+                            category.Contains("Information Systems") || category.Contains("Mathematics"))
+                            CoreRequirement1Credits += credits;
+                        else if (category.Contains("Advanced") || category.Contains("Programming"))
+                            CoreRequirement2Credits += credits;
+                        else if (category.Contains("Elective"))
                             ElectiveCredits += credits;
                     }
-                    // For CS majors - use same variables but different labels
-                    else if (degreeCode == "CS-BS")
+                    else // CIS-BS
                     {
-                        if (category.Contains("CS Core") || category.Contains("Programming") ||
-                            category.Contains("Information Systems") || category.Contains("Hardware"))
-                            BusinessCoreCredits += credits;
+                        CoreRequirement1Label = "Business Core";
+                        CoreRequirement1Required = 34;
+                        CoreRequirement2Label = "CIS Core";
+                        CoreRequirement2Required = 12;
+
+                        if (category.Contains("Business Core"))
+                            CoreRequirement1Credits += credits;
+                        else if (category.Contains("CIS Core"))
+                            CoreRequirement2Credits += credits;
                         else if (category.Contains("Elective"))
                             ElectiveCredits += credits;
                     }
                 }
             }
 
-            // Core 39 credits
-            string core39Query = $@"
-                SELECT SUM(c.CreditHours) as Core39Credits
+            // Core 39 - match completed courses against known eligible course codes
+            string allCompletedQuery = $@"
+                SELECT c.CourseCode, c.CreditHours
                 FROM StudentCourseHistory sch
                 JOIN Courses c ON sch.CourseID = c.CourseID
                 WHERE sch.StudentID = {studentId}
-                  AND c.Department IN ('English', 'Communication', 'Mathematics', 
-                                        'Economics', 'Philosophy', 'Psychology')
                   AND sch.Status = 'Completed'";
 
-            var core39Result = _dbHelper.ExecuteQuery(core39Query, out _);
-            if (core39Result != null && core39Result.Rows.Count > 0
-                && core39Result.Rows[0]["Core39Credits"] != DBNull.Value)
+            var completedResult = _dbHelper.ExecuteQuery(allCompletedQuery, out _);
+            if (completedResult != null)
             {
-                Core39Credits = int.Parse(core39Result.Rows[0]["Core39Credits"].ToString()!);
-            }
-
-            // Set labels and requirements based on degree
-            if (degreeCode == "CS-BS")
-            {
-                CoreRequirement1Label = "CS Core Requirements";
-                CoreRequirement1Credits = BusinessCoreCredits;
-                CoreRequirement1Required = 40;
-
-                CoreRequirement2Label = "Advanced CS Courses";
-                CoreRequirement2Credits = CISCoreCredits;
-                CoreRequirement2Required = 12;
-            }
-            else // CIS-BS
-            {
-                CoreRequirement1Label = "Business Core";
-                CoreRequirement1Credits = BusinessCoreCredits;
-                CoreRequirement1Required = 34;
-
-                CoreRequirement2Label = "CIS Core";
-                CoreRequirement2Credits = CISCoreCredits;
-                CoreRequirement2Required = 12;
+                foreach (DataRow row in completedResult.Rows)
+                {
+                    string code = row["CourseCode"].ToString() ?? "";
+                    if (Core39CourseCodes.Contains(code))
+                        Core39Credits += int.Parse(row["CreditHours"].ToString() ?? "0");
+                }
             }
         }
     }

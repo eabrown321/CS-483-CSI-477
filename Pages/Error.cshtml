@@ -1,26 +1,34 @@
 ﻿@page
 @model ErrorModel
 @{
-    ViewData["Title"] = "Error";
+    ViewData["Title"] = "Something went wrong";
 }
 
-<h1 class="text-danger">Error.</h1>
-<h2 class="text-danger">An error occurred while processing your request.</h2>
+<div class="fade-in-up" style="max-width:560px; margin:4rem auto; text-align:center;">
+    <div style="width:80px; height:80px; background:var(--danger-bg); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem; font-size:2rem; color:var(--danger);">
+        <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+    </div>
 
-@if (Model.ShowRequestId)
-{
-    <p>
-        <strong>Request ID:</strong> <code>@Model.RequestId</code>
+    <h1 style="color:var(--navy); font-family:'DM Serif Display', serif; margin-bottom:0.5rem;">
+        Something went wrong
+    </h1>
+    <p style="color:var(--slate-500); margin-bottom:2rem;">
+        An unexpected error occurred. Please try again or return to the dashboard.
     </p>
-}
 
-<h3>Development Mode</h3>
-<p>
-    Swapping to the <strong>Development</strong> environment displays detailed information about the error that occurred.
-</p>
-<p>
-    <strong>The Development environment shouldn't be enabled for deployed applications.</strong>
-    It can result in displaying sensitive information from exceptions to end users.
-    For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>
-    and restarting the app.
-</p>
+    @if (Model.ShowRequestId)
+    {
+        <div class="alert alert-warning mb-3" style="text-align:left; font-size:0.85rem;">
+            <strong>Request ID:</strong> <code>@Model.RequestId</code>
+        </div>
+    }
+
+    <div class="d-flex gap-3 justify-content-center">
+        <a href="javascript:history.back()" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Go Back
+        </a>
+        <a href="/StudentDashboard" class="btn btn-primary">
+            <i class="bi bi-house me-2" aria-hidden="true"></i>Dashboard
+        </a>
+    </div>
+</div>

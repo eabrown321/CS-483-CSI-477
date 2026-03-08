@@ -87,7 +87,7 @@ namespace CS_483_CSI_477.Pages
             EnsureChatId();
 
             // Auto load bulletin from Azure if not already loaded
-            await TryAutoLoadBulletinAsync();  // ADD THIS LINE
+            await TryAutoLoadBulletinAsync();
 
             PdfFileName = HttpContext.Session.GetString(PDF_FILENAME_KEY);
             await EnsureStudentContextLoadedAsync();
@@ -275,7 +275,6 @@ namespace CS_483_CSI_477.Pages
             var sid = HttpContext.Session.GetInt32("StudentID");
             if (!sid.HasValue || bulletinYear == "Unknown") return "";
 
-            // Get student's entry year from database
             var query = @"
                 SELECT EnrollmentYear 
                 FROM Students 
@@ -295,14 +294,12 @@ namespace CS_483_CSI_477.Pages
             var entryYear = Convert.ToInt32(enrollmentYear);
             var bulletinStartYear = int.Parse(bulletinYear.Split('-')[0]);
 
-            // Warn if using a bulletin from before they enrolled
             if (bulletinStartYear < entryYear)
             {
                 return $"WARNING: You enrolled in {entryYear}, but this bulletin is from {bulletinYear}. " +
                        $"You should follow the bulletin from your entry year ({entryYear}-{entryYear + 1}) unless advised otherwise.";
             }
 
-            // Warn if using a bulletin from after they enrolled
             if (bulletinStartYear > entryYear + 1)
             {
                 return $"NOTE: This bulletin ({bulletinYear}) is newer than your entry year ({entryYear}). " +
@@ -325,12 +322,11 @@ namespace CS_483_CSI_477.Pages
 
             try
             {
-                // Get student's major and enrollment year
                 var studentQuery = @"
-            SELECT s.Major, s.EnrollmentYear, dp.DegreeCode
-            FROM Students s
-            LEFT JOIN DegreePrograms dp ON s.Major = dp.DegreeName
-            WHERE s.StudentID = @studentId";
+                    SELECT s.Major, s.EnrollmentYear, dp.DegreeCode
+                    FROM Students s
+                    LEFT JOIN DegreePrograms dp ON s.Major = dp.DegreeName
+                    WHERE s.StudentID = @studentId";
 
                 var studentData = _dbHelper.ExecuteQuery(studentQuery, new[]
                 {
@@ -349,7 +345,6 @@ namespace CS_483_CSI_477.Pages
                 var entryYear = Convert.ToInt32(enrollmentYear);
                 var bulletinYearNeeded = $"{entryYear}-{entryYear + 1}";
 
-                // Map degree codes to full names in filenames
                 string majorKeyword = degreeCode switch
                 {
                     "CS-BS" => "Computer Science",
@@ -361,9 +356,12 @@ namespace CS_483_CSI_477.Pages
                     SELECT BulletinID, FileName, FilePath, BulletinYear
                     FROM Bulletins
                     WHERE IsActive = 1
-                    AND BulletinYear = @bulletinYear
+                    AND BulletinCategory = 'Major'
                     AND FileName LIKE @majorKeyword
-                    ORDER BY UploadDate DESC
+                    AND FileName NOT LIKE '%Minor%'
+                    ORDER BY 
+                        CASE WHEN BulletinYear = @bulletinYear THEN 0 ELSE 1 END,
+                        AcademicYear DESC
                     LIMIT 1";
 
                 var bulletin = _dbHelper.ExecuteQuery(bulletinQuery, new[]
@@ -383,15 +381,13 @@ namespace CS_483_CSI_477.Pages
                 var filePath = bulletinRow["FilePath"].ToString() ?? "";
                 var bulletinYear = bulletinRow["BulletinYear"].ToString() ?? "";
 
-                // Download from Azure/local and extract
-                byte[] pdfBytes = await DownloadPdfFromPathAsync(filePath);
+                byte[]? pdfBytes = await DownloadPdfFromPathAsync(filePath);
 
                 if (pdfBytes == null || pdfBytes.Length == 0)
                     return false;
 
                 var extract = _pdfService.Extract(pdfBytes, fileName, maxPages: 25, maxCharsTotal: 200_000);
 
-                // Cache in session
                 HttpContext.Session.SetString(PDF_FILENAME_KEY, fileName);
                 HttpContext.Session.SetString(PDF_PAGES_JSON_KEY, JsonSerializer.Serialize(extract.Pages));
                 HttpContext.Session.SetString(BULLETIN_YEAR_KEY, bulletinYear);
@@ -415,7 +411,6 @@ namespace CS_483_CSI_477.Pages
         {
             try
             {
-                // If it's a local path (starts with /uploads), read from filesystem
                 if (filePath.StartsWith("/uploads"))
                 {
                     var localPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", filePath.TrimStart('/'));
@@ -424,7 +419,6 @@ namespace CS_483_CSI_477.Pages
                     return null;
                 }
 
-                // Download from Azure Blob Storage with authentication
                 var azureConnStr = _configuration["AzureBlobStorage:ConnectionString"];
                 if (string.IsNullOrEmpty(azureConnStr))
                 {
@@ -432,7 +426,6 @@ namespace CS_483_CSI_477.Pages
                     return null;
                 }
 
-                // Parse blob URL to get container and blob name
                 var uri = new Uri(filePath);
                 var pathParts = uri.AbsolutePath.TrimStart('/').Split('/', 2);
 
@@ -445,7 +438,6 @@ namespace CS_483_CSI_477.Pages
                 var containerName = pathParts[0];
                 var blobName = pathParts[1];
 
-                // Use Azure SDK to download with authentication
                 var blobServiceClient = new Azure.Storage.Blobs.BlobServiceClient(azureConnStr);
                 var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
                 var blobClient = containerClient.GetBlobClient(blobName);
@@ -624,7 +616,6 @@ namespace CS_483_CSI_477.Pages
             sb.AppendLine($"- Total Quality Points: {gpaCalc.CumulativePoints}");
             sb.AppendLine($"- Courses included in GPA: {gpaCalc.Courses.Count}");
 
-
             // Add hold information BEFORE closing the context
             var holdMessage = _holdService.GetActiveHoldsMessage(studentId);
             if (!string.IsNullOrEmpty(holdMessage))
@@ -633,7 +624,7 @@ namespace CS_483_CSI_477.Pages
                 sb.AppendLine(holdMessage);
             }
 
-            sb.AppendLine("=== END STUDENT DB CONTEXT ===");  // Move this to AFTER holds
+            sb.AppendLine("=== END STUDENT DB CONTEXT ===");
 
             return Task.FromResult(sb.ToString());
         }
@@ -661,11 +652,6 @@ namespace CS_483_CSI_477.Pages
 
             var msg = userMessage?.Trim() ?? "";
             if (msg.Length == 0) return false;
-
-            // Match planner commands like:
-            // "add CS 311 to Fall 2026"
-            // "remove CS 311 from spring 2027"
-            // "move CS 311 from fall 2026 to spring 2027"
 
             var addRx = new Regex(
                 @"\b(?<action>add|plan)\b\s+(?<code>[A-Z]{2,4}\s*\d{3})\s+(?:to|in)\s+(?<term>fall|spring|summer)\s+(?<year>\d{4})\b",
@@ -714,7 +700,6 @@ namespace CS_483_CSI_477.Pages
             return false;
         }
 
-
         private async Task<string> GetAdvisorResponseAsync(string userMessage)
         {
             // Handle planner commands FIRST
@@ -744,7 +729,6 @@ namespace CS_483_CSI_477.Pages
                 }
             }
 
-            // Continue with existing chatbot logic
             var studentContext = HttpContext.Session.GetString(STUDENT_CONTEXT_KEY) ?? "(No student DB context loaded.)";
 
             bool wantsProfile =
@@ -769,23 +753,30 @@ namespace CS_483_CSI_477.Pages
 
             if (looksPlanning)
             {
-                var studentMajor = HttpContext.Session.GetString("StudentMajor") ?? "";
-                var majorDepts = BulletinCourseParser.GetDepartmentsForMajor(studentMajor);
-                var rec = _catalogService.RecommendNextCourses(plan, completedSet, count: 6, allowedDepts: majorDepts);
+                // Query DegreeRequirements directly — only courses actually required for this student's degree
+                var remainingCourses = GetRemainingRequiredCourses(sid ?? 0);
 
-                if (rec.Count == 0)
+                if (remainingCourses.Count == 0)
                 {
-                    return "I parsed the PDF, but I couldn't find any remaining required/elective courses to recommend.";
+                    return "Great news — it looks like you've completed all your required courses! Please consult your advisor to confirm graduation eligibility.";
                 }
 
-                var prompt = BuildPlanningPrompt(userMessage, studentContext, PdfFileName ?? "Uploaded PDF", rec, sid);
+                // Convert to CatalogCourse list for existing prompt builder
+                var rec = remainingCourses.Select(r => new CatalogCourse
+                {
+                    Code = r.CourseCode,
+                    Title = r.CourseName,
+                    CreditsText = r.CreditHours.ToString(),
+                    Section = r.Category
+                }).Take(8).ToList();
+
+                var prompt = BuildPlanningPrompt(userMessage, studentContext, "Degree Requirements (DB)", rec, sid);
                 return await _gemini.GenerateWithHistoryAsync(Messages, prompt);
             }
 
             // General question - use RAG to find relevant bulletin content
             var ragHits = _ragService.FindTopRelevantSnippets(pdfPages, userMessage, topK: 3, snippetMaxChars: 600);
 
-            // Also search supporting documents
             var bulletinYear = HttpContext.Session.GetString(BULLETIN_YEAR_KEY) ?? null;
             var supportingDocs = await _docsRagService.SearchSupportingDocsAsync(
                 userMessage,
@@ -793,7 +784,6 @@ namespace CS_483_CSI_477.Pages
                 documentYear: bulletinYear,
                 maxDocuments: 3);
 
-            // Debug: Check if Core 39 is in student context
             _logger.LogInformation("=== STUDENT CONTEXT CHECK ===");
             _logger.LogInformation($"Contains 'Core 39': {studentContext.Contains("Core 39 General Education Progress:")}");
             _logger.LogInformation($"Contains 'Completed': {studentContext.Contains("Completed and In-Progress Courses:")}");
@@ -807,7 +797,6 @@ namespace CS_483_CSI_477.Pages
                 ragHits,
                 supportingDocs);
 
-            // Debug: Log the prompt to see what AI receives
             _logger.LogInformation("=== PROMPT SENT TO AI ===");
             _logger.LogInformation(generalPrompt);
             _logger.LogInformation("=== END PROMPT ===");
@@ -927,12 +916,12 @@ namespace CS_483_CSI_477.Pages
                 var creditsLine = studentContext.Split('\n').FirstOrDefault(l => l.Contains("Credits Earned:"));
                 if (creditsLine != null)
                 {
-                    var match = System.Text.RegularExpressions.Regex.Match(creditsLine, @"(\d+)\s*/\s*(\d+)");
+                    var match = Regex.Match(creditsLine, @"(\d+)\s*/\s*(\d+)");
                     if (match.Success)
                     {
-                        var earned = int.Parse(match.Groups[1].Value);
-                        var required = int.Parse(match.Groups[2].Value);
-                        var remaining = required - earned;
+                        var earnedCredits = int.Parse(match.Groups[1].Value);
+                        var requiredCredits = int.Parse(match.Groups[2].Value);
+                        var remaining = requiredCredits - earnedCredits;
                         sb.AppendLine($"Credits Remaining to Graduate: {remaining}");
                         sb.AppendLine($"Recommended Credit Load: {(remaining < 12 ? remaining : "12-15")} credits per semester");
                         sb.AppendLine();
@@ -940,7 +929,7 @@ namespace CS_483_CSI_477.Pages
                 }
             }
 
-            // Add Core 39 and completed courses context
+            // Add Core 39 context
             if (studentContext.Contains("Core 39 General Education Progress:"))
             {
                 var core39Section = ExtractSection(studentContext, "Core 39 General Education Progress:", "=== END");
@@ -952,6 +941,7 @@ namespace CS_483_CSI_477.Pages
                 }
             }
 
+            // Add completed courses context
             if (studentContext.Contains("Completed and In-Progress Courses:"))
             {
                 var coursesSection = ExtractSection(studentContext, "Completed and In-Progress Courses:", "Core 39");
@@ -964,8 +954,7 @@ namespace CS_483_CSI_477.Pages
             }
 
             sb.AppendLine();
-
-            sb.AppendLine($"Source PDF: {catalogName}");
+            sb.AppendLine($"Source: {catalogName}");
             sb.AppendLine();
 
             sb.AppendLine("PROVIDED RECOMMENDED COURSES (use ONLY these):");
@@ -974,7 +963,6 @@ namespace CS_483_CSI_477.Pages
             {
                 var cr = !string.IsNullOrWhiteSpace(c.CreditsText) ? $" | Credits: {c.CreditsText}" : "";
 
-                // Check prerequisites
                 string prereqInfo = "";
                 if (sid.HasValue)
                 {
@@ -1001,7 +989,6 @@ namespace CS_483_CSI_477.Pages
             sb.AppendLine(userQuestion);
 
             return sb.ToString();
-
         }
 
         private static string ExtractSection(string text, string startMarker, string endMarker)
@@ -1057,7 +1044,6 @@ namespace CS_483_CSI_477.Pages
             sb.AppendLine(snap);
             sb.AppendLine();
 
-            // Add Core 39 and completed courses context
             if (studentContext.Contains("Core 39 General Education Progress:"))
             {
                 var core39Section = ExtractSection(studentContext, "Core 39 General Education Progress:", "=== END");
@@ -1083,7 +1069,6 @@ namespace CS_483_CSI_477.Pages
             sb.AppendLine();
             sb.AppendLine($"Catalog from PDF: {catalogName}");
 
-            // ADD THIS SECTION:
             if (supportingDocs.Count > 0)
             {
                 sb.AppendLine();
@@ -1144,7 +1129,6 @@ namespace CS_483_CSI_477.Pages
             sb.AppendLine("---");
             sb.AppendLine("**Sources:**");
 
-            // Bulletin citations
             if (bulletinHits.Count > 0)
             {
                 foreach (var hit in bulletinHits.OrderBy(h => h.Page))
@@ -1153,7 +1137,6 @@ namespace CS_483_CSI_477.Pages
                 }
             }
 
-            // Supporting document citations
             if (supportingDocs.Count > 0)
             {
                 foreach (var doc in supportingDocs)
@@ -1187,7 +1170,6 @@ namespace CS_483_CSI_477.Pages
 
             if (existing != null && existing.Rows.Count > 0)
             {
-                // Update existing log
                 var logId = Convert.ToInt32(existing.Rows[0]["LogID"]);
                 var updateSql = "UPDATE ChatUsageLogs SET MessageCount = MessageCount + 1 WHERE LogID = @logId";
                 _dbHelper.ExecuteNonQuery(updateSql, new[]
@@ -1197,7 +1179,6 @@ namespace CS_483_CSI_477.Pages
             }
             else
             {
-                // Insert new log
                 var insertSql = @"
                     INSERT INTO ChatUsageLogs (StudentID, MessageCount, SessionDate)
                     VALUES (@sid, 1, @date)";
@@ -1207,7 +1188,56 @@ namespace CS_483_CSI_477.Pages
                     new MySqlParameter("@date", MySqlDbType.Date) { Value = today }
                 }, out _);
             }
+        }
 
+        private List<(string CourseCode, string CourseName, int CreditHours, string Category)> GetRemainingRequiredCourses(int studentId)
+        {
+            var query = @"
+                SELECT 
+                    c.CourseCode,
+                    c.CourseName,
+                    c.CreditHours,
+                    dr.RequirementCategory,
+                    c.TypicalTermsOffered
+                FROM DegreeRequirements dr
+                JOIN Courses c ON dr.CourseID = c.CourseID
+                JOIN DegreePrograms dp ON dr.DegreeID = dp.DegreeID
+                JOIN Students s ON dp.DegreeName = s.Major
+                WHERE s.StudentID = @studentId
+                  AND c.IsActive = 1
+                  AND c.CourseID NOT IN (
+                      SELECT CourseID 
+                      FROM StudentCourseHistory 
+                      WHERE StudentID = @studentId
+                        AND Status IN ('Completed', 'In Progress')
+                  )
+                ORDER BY dr.RequirementCategory, c.CourseCode";
+
+            var result = _dbHelper.ExecuteQuery(query, new[]
+            {
+                new MySqlParameter("@studentId", MySqlDbType.Int32) { Value = studentId }
+            }, out var err);
+
+            var courses = new List<(string, string, int, string)>();
+
+            if (!string.IsNullOrEmpty(err) || result == null) return courses;
+
+            foreach (System.Data.DataRow row in result.Rows)
+            {
+                var code = row["CourseCode"].ToString() ?? "";
+                var name = row["CourseName"].ToString() ?? "";
+                var credits = Convert.ToInt32(row["CreditHours"]);
+                var category = row["RequirementCategory"].ToString() ?? "";
+                var terms = row["TypicalTermsOffered"]?.ToString() ?? "";
+
+                var categoryWithTerms = string.IsNullOrEmpty(terms)
+                    ? category
+                    : $"{category} (Offered: {terms})";
+
+                courses.Add((code, name, credits, categoryWithTerms));
+            }
+
+            return courses;
         }
     }
 }

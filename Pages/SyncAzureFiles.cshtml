@@ -4,29 +4,63 @@
     ViewData["Title"] = "Sync Azure Files";
 }
 
-<div class="container mt-4">
-    <h2>Sync Azure Files to Database</h2>
-    <p>This will scan Azure blob containers and create database entries for all uploaded files.</p>
+<div class="fade-in-up" style="max-width:800px; margin:0 auto;">
 
-    <form method="post">
-        <button type="submit" class="btn btn-primary btn-lg">
-            <i class="bi bi-cloud-download"></i> Sync All Files
-        </button>
-    </form>
+    <div class="section-header mb-4">
+        <h5>
+            <span class="section-icon"><i class="bi bi-cloud-download" aria-hidden="true"></i></span>
+            Sync Azure Files
+        </h5>
+        <a href="/AdminTools" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+        </a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body" style="padding:1.5rem;">
+            <p style="color:var(--slate-700); font-size:0.9rem; margin-bottom:1.25rem;">
+                Scans Azure blob storage containers and creates database records for all uploaded files.
+                Covers bulletins, minors, and certificates.
+            </p>
+
+            <div class="alert alert-info mb-4" role="alert">
+                <i class="bi bi-info-circle-fill me-2" aria-hidden="true"></i>
+                Existing records will not be duplicated. Only new files will be added.
+            </div>
+
+            <form method="post" data-ai-form>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-arrow-repeat me-2" aria-hidden="true"></i>Sync All Files
+                </button>
+            </form>
+        </div>
+    </div>
 
     @if (Model.Results.Count > 0)
     {
-        <div class="card mt-4">
-            <div class="card-header bg-success text-white">
-                <h5>Sync Results</h5>
-                <p class="mb-0">Bulletins: @Model.BulletinsAdded | Minors: @Model.MinorsAdded | Certificates: @Model.CertificatesAdded</p>
+        <div class="card fade-in-up">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span>
+                    <i class="bi bi-check-circle me-2" aria-hidden="true"></i>Sync Results
+                </span>
+                <span class="badge" style="background:rgba(255,255,255,0.2); font-size:0.7rem;">
+                    Bulletins: @Model.BulletinsAdded · Minors: @Model.MinorsAdded · Certs: @Model.CertificatesAdded
+                </span>
             </div>
-            <div class="card-body" style="max-height: 500px; overflow-y: auto;">
-                @foreach (var result in Model.Results)
-                {
-                    <p class="mb-1">@result</p>
-                }
+            <div class="card-body p-0">
+                <div style="max-height:450px; overflow-y:auto; padding:1.25rem;
+                                font-family:'JetBrains Mono','Courier New',monospace;
+                                font-size:0.78rem; line-height:1.6; color:var(--slate-700);
+                                background:var(--slate-50);">
+                    @foreach (var result in Model.Results)
+                    {
+                        <div style="padding:0.1rem 0; border-bottom:1px solid var(--slate-100);">
+                            @result
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     }
+
 </div>

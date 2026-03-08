@@ -74,7 +74,7 @@ namespace CS_483_CSI_477.Pages
         {
             int studentId = HttpContext.Session.GetInt32("StudentID") ?? 0;
 
-            // Build 8 semesters (Fall/Spring) starting from StartYear
+            // Build 8 semesters starting from StartYear
             Semesters.Clear();
             for (int year = 0; year < 4; year++)
             {
@@ -93,48 +93,34 @@ namespace CS_483_CSI_477.Pages
                 });
             }
 
-            // Your real schema:
-            // PlannedCourses: PlanID, PlannedTerm, PlannedYear
-            // StudentDegreePlans: PlanID, StudentID
+            // Pull from StudentCourseHistory (completed + in progress)
             string query = @"
-                SELECT 
-                    pc.PlannedCourseID,
-                    c.CourseCode,
-                    c.CourseName,
-                    c.CreditHours,
-                    pc.PlannedTerm,
-                    pc.PlannedYear,
-                    pc.IsCompleted
-                FROM PlannedCourses pc
-                JOIN Courses c ON pc.CourseID = c.CourseID
-                JOIN StudentDegreePlans sdp ON pc.PlanID = sdp.PlanID
-                WHERE sdp.StudentID = @sid
-                AND (sdp.IsActive = 1 OR sdp.IsActive IS NULL)
-                ORDER BY pc.PlannedYear, pc.PlannedTerm;";
+        SELECT 
+            c.CourseCode,
+            c.CourseName,
+            c.CreditHours,
+            sch.Term AS PlannedTerm,
+            sch.AcademicYear AS PlannedYear,
+            CASE WHEN sch.Status = 'Completed' THEN 1 ELSE 0 END AS IsCompleted
+        FROM StudentCourseHistory sch
+        JOIN Courses c ON sch.CourseID = c.CourseID
+        WHERE sch.StudentID = @sid
+        ORDER BY sch.AcademicYear, sch.Term;";
 
             var result = _dbHelper.ExecuteQuery(query, new[]
             {
-                new MySqlParameter("@sid", MySqlDbType.Int32){ Value = studentId }
-            }, out _);
+        new MySqlParameter("@sid", MySqlDbType.Int32){ Value = studentId }
+    }, out _);
 
             if (result == null) return;
 
             foreach (DataRow row in result.Rows)
             {
-                // tinyint(1) -> safe bool conversion
-                bool isCompleted = false;
-                var ic = row["IsCompleted"];
-                if (ic != DBNull.Value)
-                {
-                    // handles 0/1, true/false
-                    if (ic is bool b) isCompleted = b;
-                    else if (int.TryParse(ic.ToString(), out var n)) isCompleted = (n != 0);
-                    else if (bool.TryParse(ic.ToString(), out var bb)) isCompleted = bb;
-                }
+                bool isCompleted = Convert.ToInt32(row["IsCompleted"]) == 1;
 
                 var course = new PlannedCourse
                 {
-                    PlannedCourseID = Convert.ToInt32(row["PlannedCourseID"]),
+                    PlannedCourseID = 0,
                     CourseCode = row["CourseCode"]?.ToString() ?? "",
                     CourseName = row["CourseName"]?.ToString() ?? "",
                     CreditHours = Convert.ToInt32(row["CreditHours"]),

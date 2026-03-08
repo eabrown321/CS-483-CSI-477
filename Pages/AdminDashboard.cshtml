@@ -4,105 +4,106 @@
     ViewData["Title"] = "Admin Dashboard";
 }
 
-<div class="container mt-4">
-    <h2>Admin Dashboard</h2>
+<div class="fade-in-up">
 
-    <div class="mb-3">
-        <a href="/AdminTools" class="btn btn-primary">
-            <i class="bi bi-tools"></i> Admin Tools
-        </a>
+    <!-- Header -->
+    <div class="welcome-banner mb-4">
+        <div class="gold-tag">
+            <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+            Administration
+        </div>
+        <h1 class="mb-1">Admin Dashboard</h1>
+        <p class="mb-0">Manage bulletins, documents, and student records</p>
     </div>
 
-    <!-- DB Connection Status -->
-    <div class="alert @(Model.IsConnected ? "alert-success" : "alert-danger") mt-3">
-        @if (Model.IsConnected)
-        {
-            <span>@Model.ConnectionMessage</span>
-        }
-        else
-        {
-            <span>@Model.ErrorMessage</span>
-        }
+    <!-- DB Status -->
+    <div class="alert @(Model.IsConnected ? "alert-success" : "alert-danger") mb-4" role="alert">
+        <i class="bi bi-@(Model.IsConnected ? "database-check" : "database-x") me-2" aria-hidden="true"></i>
+        @(Model.IsConnected? Model.ConnectionMessage: Model.ErrorMessage)
     </div>
 
-    <!-- Upload / Search Result Messages -->
     @if (!string.IsNullOrEmpty(Model.UploadMessage))
     {
-        <div class="alert @(Model.UploadSuccess ? "alert-success" : "alert-warning")">
+        <div class="alert @(Model.UploadSuccess ? "alert-success" : "alert-warning") mb-3" role="alert">
+            <i class="bi bi-@(Model.UploadSuccess ? "check-circle" : "exclamation-triangle") me-2" aria-hidden="true"></i>
             @Model.UploadMessage
         </div>
     }
     @if (!string.IsNullOrEmpty(Model.SearchMessage))
     {
-        <div class="alert alert-info">@Model.SearchMessage</div>
+        <div class="alert alert-info mb-3" role="alert">
+            <i class="bi bi-info-circle me-2" aria-hidden="true"></i>
+            @Model.SearchMessage
+        </div>
     }
 
-    <div class="row mt-3">
+    <!-- Upload Cards -->
+    <div class="row g-3 mb-4">
 
-        <!-- UPLOAD BULLETIN -->
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Upload Bulletin PDF</h5>
+        <!-- Upload Bulletin -->
+        <div class="col-lg-6 fade-in-up fade-in-up-delay-1">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="bi bi-file-earmark-arrow-up me-2" aria-hidden="true"></i>Upload Bulletin PDF
                 </div>
                 <div class="card-body">
-                    <form method="post" asp-page-handler="UploadBulletin"
-                          enctype="multipart/form-data">
+                    <form method="post" asp-page-handler="UploadBulletin" enctype="multipart/form-data">
                         <div class="mb-3">
-                            <label class="form-label">
+                            <label class="form-label" for="BulletinYear">
                                 Academic Year <span class="text-danger">*</span>
                             </label>
-                            <input type="number" name="BulletinYear" class="form-control"
-                                   min="2020" max="2030" value="@Model.BulletinYear" required />
-                            <div class="form-text">e.g. 2025 = 2025-2026 bulletin</div>
+                            <input type="number" name="BulletinYear" id="BulletinYear"
+                                   class="form-control" min="2020" max="2030"
+                                   value="@Model.BulletinYear" required />
+                            <div class="form-text">e.g. 2025 = 2025–2026 bulletin</div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">
+                            <label class="form-label" for="BulletinCategory">
                                 Category <span class="text-danger">*</span>
                             </label>
-                            <select name="BulletinCategory" class="form-select" required>
+                            <select name="BulletinCategory" id="BulletinCategory" class="form-select" required>
                                 <option value="Major" selected>Major Program</option>
                                 <option value="Minor">Minor Program</option>
                                 <option value="Core39">Core 39 / General Education</option>
                                 <option value="General">General Catalog</option>
                             </select>
-                            <div class="form-text">Minors will be stored in separate container</div>
+                            <div class="form-text">Minors are stored in a separate container</div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">
+                            <label class="form-label" for="bulletinFile">
                                 PDF File <span class="text-danger">*</span>
                             </label>
-                            <input type="file" name="bulletinFile" class="form-control"
-                                   accept=".pdf" id="bulletinFile" required />
-                            <div class="form-text">Max 50 MB, PDF only</div>
+                            <input type="file" name="bulletinFile" id="bulletinFile"
+                                   class="form-control" accept=".pdf" required />
+                            <div class="form-text">Max 50 MB · PDF only</div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Description</label>
-                            <input type="text" name="BulletinDescription" class="form-control"
-                                   placeholder="e.g. 2025-2026 Official Undergraduate Bulletin" />
+                            <label class="form-label" for="BulletinDescription">Description</label>
+                            <input type="text" name="BulletinDescription" id="BulletinDescription"
+                                   class="form-control"
+                                   placeholder="e.g. 2025–2026 Official Undergraduate Bulletin" />
                         </div>
                         <button type="submit" class="btn btn-primary w-100">
-                            Upload Bulletin
+                            <i class="bi bi-cloud-upload me-2" aria-hidden="true"></i>Upload Bulletin
                         </button>
                     </form>
                 </div>
             </div>
         </div>
 
-        <!-- UPLOAD SUPPORTING DOC -->
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">Upload Supporting Document</h5>
+        <!-- Upload Supporting Doc -->
+        <div class="col-lg-6 fade-in-up fade-in-up-delay-2">
+            <div class="card h-100">
+                <div class="card-header gold">
+                    <i class="bi bi-file-earmark-plus me-2" aria-hidden="true"></i>Upload Supporting Document
                 </div>
                 <div class="card-body">
-                    <form method="post" asp-page-handler="UploadDocument"
-                          enctype="multipart/form-data">
+                    <form method="post" asp-page-handler="UploadDocument" enctype="multipart/form-data">
                         <div class="mb-3">
-                            <label class="form-label">
+                            <label class="form-label" for="DocType">
                                 Document Type <span class="text-danger">*</span>
                             </label>
-                            <select name="DocType" class="form-select" required>
+                            <select name="DocType" id="DocType" class="form-select" required>
                                 <option value="Syllabus">Syllabus</option>
                                 <option value="Policy">Policy</option>
                                 <option value="Advising Guide">Advising Guide</option>
@@ -110,25 +111,25 @@
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Course Code (if Syllabus)</label>
-                            <input type="text" name="CourseCode" class="form-control"
-                                   placeholder="e.g. CS 258" />
+                            <label class="form-label" for="CourseCode">Course Code (if Syllabus)</label>
+                            <input type="text" name="CourseCode" id="CourseCode"
+                                   class="form-control" placeholder="e.g. CS 258" />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">
+                            <label class="form-label" for="docFile">
                                 File <span class="text-danger">*</span>
                             </label>
-                            <input type="file" name="documentFile" class="form-control"
-                                   accept=".pdf,.docx,.doc,.txt" id="docFile" required />
-                            <div class="form-text">Max 50 MB, PDF/DOCX/DOC/TXT</div>
+                            <input type="file" name="documentFile" id="docFile"
+                                   class="form-control" accept=".pdf,.docx,.doc,.txt" required />
+                            <div class="form-text">Max 50 MB · PDF / DOCX / DOC / TXT</div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Description</label>
-                            <input type="text" name="DocDescription" class="form-control"
-                                   placeholder="Brief description" />
+                            <label class="form-label" for="DocDescription">Description</label>
+                            <input type="text" name="DocDescription" id="DocDescription"
+                                   class="form-control" placeholder="Brief description" />
                         </div>
-                        <button type="submit" class="btn btn-success w-100">
-                            Upload Document
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-cloud-upload me-2" aria-hidden="true"></i>Upload Document
                         </button>
                     </form>
                 </div>
@@ -136,169 +137,225 @@
         </div>
     </div>
 
-    <!-- BULLETINS TABLE -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <strong>Uploaded Bulletins</strong>
-            <span class="badge bg-primary">
+    <!-- Bulletins Table -->
+    <div class="card mb-4 fade-in-up">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <span>
+                <i class="bi bi-journals me-2" aria-hidden="true"></i>Uploaded Bulletins
+            </span>
+            <span class="badge" style="background:rgba(255,255,255,0.2); font-size:0.7rem;">
                 @(Model.Bulletins?.Rows.Count ?? 0) file(s)
             </span>
         </div>
-        <div class="card-body p-0">
-            <table class="table table-hover table-striped mb-0">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Year</th>
-                        <th>Category</th>
-                        <th>File Name</th>
-                        <th>Size</th>
-                        <th>Upload Date</th>
-                        <th>Description</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model.Bulletins != null && Model.Bulletins.Rows.Count > 0)
+
+        @if (Model.Bulletins != null && Model.Bulletins.Rows.Count > 0)
+        {
+            var bulletinGroups = Model.Bulletins.Rows
+            .Cast<System.Data.DataRow>()
+            .GroupBy(r => r["BulletinCategory"].ToString())
+            .OrderBy(g => g.Key);
+
+            <div class="accordion" id="bulletinAccordion">
+                @foreach (var group in bulletinGroups)
+                {
+                    var cat = group.Key ?? "Other";
+                    var safeId = cat.Replace(" ", "").Replace("/", "");
+                    var count = group.Count();
+                    var (catBg, catColor) = cat switch
                     {
-                        @foreach (System.Data.DataRow row in Model.Bulletins.Rows)
-                        {
-                            <tr>
-                                <td>
-                                    <span class="badge bg-primary">
-                                        @row["AcademicYear"]
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-@(row["BulletinCategory"].ToString() == "Minor" ? "info" : "success")">
-                                        @row["BulletinCategory"]
-                                    </span>
-                                </td>
-                                <td>@row["FileName"]</td>
-                                <td>
-                                    @((long.Parse(row["FileSize"].ToString()!)
-                                                                / 1024.0 / 1024.0).ToString("F1")) MB
-                        </td>
-                        <td>
-                            @(((DateTime)row["UploadDate"]).ToString("MM/dd/yyyy"))
-                        </td>
-                        <td>@row["Description"]</td>
-                        <td>
-                            <form method="post"
-                                  asp-page-handler="DeleteBulletin"
-                                  class="d-inline">
-                                <input type="hidden" name="id"
-                                       value="@row["BulletinID"]" />
-                                <button class="btn btn-sm btn-outline-danger"
-                                        onclick="return confirm(
-                                                    'Delete this bulletin?')">
-                                    Delete
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
+                        "Minor" => ("#dbeafe", "#1d4ed8"),
+                        "Core39" => ("#fdf3e0", "#c8922a"),
+                        "General" => ("#f1f5f9", "#475569"),
+                        _ => ("#dcfce7", "#15803d")
+                    };
+
+                    <div class="accordion-item" style="border:none; border-bottom:1px solid var(--slate-100);">
+                        <h2 class="accordion-header" id="heading-@safeId">
+                            <button class="accordion-button collapsed"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#collapse-@safeId"
+                                    aria-expanded="false"
+                                    aria-controls="collapse-@safeId"
+                                    style="background:var(--slate-50); color:var(--navy); font-weight:600; font-size:0.875rem; padding:0.875rem 1.25rem; box-shadow:none;">
+                                <span class="badge-grade me-2" style="background:@catBg; color:@catColor;">@cat</span>
+                                <span style="color:var(--slate-500); font-weight:400; font-size:0.8rem;">@count file(s)</span>
+                            </button>
+                        </h2>
+                        <div id="collapse-@safeId"
+                             class="accordion-collapse collapse"
+                             aria-labelledby="heading-@safeId"
+                             data-bs-parent="#bulletinAccordion">
+                            <div class="accordion-body p-0">
+                                <table class="table mb-0" aria-label="@cat bulletins">
+                                    <thead>
+                                        <tr>
+                                            <th>Year</th>
+                                            <th>File Name</th>
+                                            <th>Size</th>
+                                            <th>Uploaded</th>
+                                            <th>Description</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var row in group)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <span class="badge-grade" style="background:var(--slate-100); color:var(--navy);">
+                                                        @row["AcademicYear"]
+                                                    </span>
+                                                </td>
+                                                <td style="font-size:0.85rem; color:var(--slate-700);">@row["FileName"]</td>
+                                                <td style="font-size:0.8rem; color:var(--slate-500);">
+                                                    @((long.Parse(row["FileSize"].ToString()!) / 1024.0 / 1024.0).ToString("F1")) MB
+                                                </td>
+                                                <td style="font-size:0.8rem; color:var(--slate-500);">
+                                                    @(((DateTime)row["UploadDate"]).ToString("MM/dd/yyyy"))
+                                                </td>
+                                                <td style="font-size:0.8rem; color:var(--slate-500);">@row["Description"]</td>
+                                                <td>
+                                                    <form method="post" asp-page-handler="DeleteBulletin" class="d-inline">
+                                                        <input type="hidden" name="id" value="@row["BulletinID"]" />
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                onclick="return confirm('Delete this bulletin?')"
+                                                                aria-label="Delete bulletin">
+                                                            <i class="bi bi-trash" aria-hidden="true"></i>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
                                         }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-3">
-                                No bulletins uploaded yet.
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5" style="color:var(--slate-500);">
+                <i class="bi bi-inbox" style="font-size:2rem; display:block; margin-bottom:0.5rem;" aria-hidden="true"></i>
+                No bulletins uploaded yet.
+            </div>
+        }
     </div>
 
-    <!-- SUPPORTING DOCS TABLE -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <strong>Supporting Documents</strong>
-            <span class="badge bg-success">
+    <!-- Supporting Docs Table -->
+    <div class="card mb-4 fade-in-up">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <span>
+                <i class="bi bi-file-earmark-text me-2" aria-hidden="true"></i>Supporting Documents
+            </span>
+            <span class="badge" style="background:rgba(255,255,255,0.2); font-size:0.7rem;">
                 @(Model.Documents?.Rows.Count ?? 0) file(s)
             </span>
         </div>
-        <div class="card-body p-0">
-            <table class="table table-hover table-striped mb-0">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Type</th>
-                        <th>File Name</th>
-                        <th>Course</th>
-                        <th>Size</th>
-                        <th>Upload Date</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model.Documents != null && Model.Documents.Rows.Count > 0)
-                    {
-                        @foreach (System.Data.DataRow row in Model.Documents.Rows)
-                        {
-                            <tr>
-                                <td>
-                                    <span class="badge bg-secondary">
-                                        @row["DocumentType"]
-                                    </span>
-                                </td>
-                                <td>@row["DocumentName"]</td>
-                                <td>
-                                    @(row["CourseCode"]?.ToString() is
-                                    { Length: > 0 } cc ? cc : "N/A")
-                                                                </td>
-                                                                <td>
-                                    @((long.Parse(row["FileSize"].ToString()!)
-                                                                / 1024.0 / 1024.0).ToString("F1")) MB
-                        </td>
-                        <td>
-                            @(((DateTime)row["UploadDate"]).ToString("MM/dd/yyyy"))
-                        </td>
-                        <td>
-                            <form method="post"
-                                  asp-page-handler="DeleteDocument"
-                                  class="d-inline">
-                                <input type="hidden" name="id"
-                                       value="@row["DocumentID"]" />
-                                <button class="btn btn-sm btn-outline-danger"
-                                        onclick="return confirm(
-                                                    'Delete this document?')">
-                                    Delete
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
+
+        @if (Model.Documents != null && Model.Documents.Rows.Count > 0)
+        {
+            var docGroups = Model.Documents.Rows
+            .Cast<System.Data.DataRow>()
+            .GroupBy(r => r["DocumentType"].ToString())
+            .OrderBy(g => g.Key);
+
+            <div class="accordion" id="docAccordion">
+                @foreach (var group in docGroups)
+                {
+                    var docType = group.Key ?? "Other";
+                    var safeId = "doc-" + docType.Replace(" ", "").Replace("/", "");
+                    var count = group.Count();
+
+                    <div class="accordion-item" style="border:none; border-bottom:1px solid var(--slate-100);">
+                        <h2 class="accordion-header" id="heading-@safeId">
+                            <button class="accordion-button collapsed"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#collapse-@safeId"
+                                    aria-expanded="false"
+                                    aria-controls="collapse-@safeId"
+                                    style="background:var(--slate-50); color:var(--navy); font-weight:600; font-size:0.875rem; padding:0.875rem 1.25rem; box-shadow:none;">
+                                <span class="badge-grade me-2" style="background:var(--slate-100); color:var(--slate-600);">@docType</span>
+                                <span style="color:var(--slate-500); font-weight:400; font-size:0.8rem;">@count file(s)</span>
+                            </button>
+                        </h2>
+                        <div id="collapse-@safeId"
+                             class="accordion-collapse collapse"
+                             aria-labelledby="heading-@safeId"
+                             data-bs-parent="#docAccordion">
+                            <div class="accordion-body p-0">
+                                <table class="table mb-0" aria-label="@docType documents">
+                                    <thead>
+                                        <tr>
+                                            <th>File Name</th>
+                                            <th>Course</th>
+                                            <th>Size</th>
+                                            <th>Uploaded</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var row in group)
+                                        {
+                                            <tr>
+                                                <td style="font-size:0.85rem; color:var(--slate-700);">@row["DocumentName"]</td>
+                                                <td style="font-size:0.8rem; color:var(--slate-500);">
+                                                    @(row["CourseCode"]?.ToString() is { Length: > 0 } cc ? cc : "—")
+                                                </td>
+                                                <td style="font-size:0.8rem; color:var(--slate-500);">
+                                                    @((long.Parse(row["FileSize"].ToString()!) / 1024.0 / 1024.0).ToString("F1")) MB
+                                                </td>
+                                                <td style="font-size:0.8rem; color:var(--slate-500);">
+                                                    @(((DateTime)row["UploadDate"]).ToString("MM/dd/yyyy"))
+                                                </td>
+                                                <td>
+                                                    <form method="post" asp-page-handler="DeleteDocument" class="d-inline">
+                                                        <input type="hidden" name="id" value="@row["DocumentID"]" />
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                onclick="return confirm('Delete this document?')"
+                                                                aria-label="Delete document">
+                                                            <i class="bi bi-trash" aria-hidden="true"></i>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
                                         }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-3">
-                                No documents uploaded yet.
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5" style="color:var(--slate-500);">
+                <i class="bi bi-inbox" style="font-size:2rem; display:block; margin-bottom:0.5rem;" aria-hidden="true"></i>
+                No documents uploaded yet.
+            </div>
+        }
     </div>
 
-    <!-- STUDENT LOOKUP -->
-    <div class="card shadow-sm mb-4">
+    <!-- Student Lookup -->
+    <div class="card fade-in-up">
         <div class="card-header">
-            <strong>Student Lookup</strong>
+            <i class="bi bi-person-search me-2" aria-hidden="true"></i>Student Lookup
         </div>
         <div class="card-body">
             <form method="post" asp-page-handler="Search">
                 <div class="row g-2 align-items-end">
-                    <div class="col-md-8">
-                        <label class="form-label">Student ID or Email</label>
+                    <div class="col-md-9">
+                        <label class="form-label" for="StudentId">Student ID or Email</label>
                         <input type="text" class="form-control" asp-for="StudentId"
-                               placeholder="e.g. 800123456 or student@usi.edu" />
+                               id="StudentId" placeholder="e.g. 1 or student@email.com" />
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <button type="submit" class="btn btn-primary w-100">
-                            Search
+                            <i class="bi bi-search me-2" aria-hidden="true"></i>Search
                         </button>
                     </div>
                 </div>
@@ -307,24 +364,22 @@
             @if (Model.StudentResults != null && Model.StudentResults.Rows.Count > 0)
             {
                 <div class="table-responsive mt-3">
-                    <table class="table table-striped">
-                        <thead class="table-dark">
+                    <table class="table mb-0" aria-label="Student search results">
+                        <thead>
                             <tr>
-                                @foreach (System.Data.DataColumn col
-                                                            in Model.StudentResults.Columns)
+                                @foreach (System.Data.DataColumn col in Model.StudentResults.Columns)
                                 {
                                     <th>@col.ColumnName</th>
                                 }
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (System.Data.DataRow row
-                                                    in Model.StudentResults.Rows)
+                            @foreach (System.Data.DataRow row in Model.StudentResults.Rows)
                             {
                                 <tr>
                                     @foreach (var item in row.ItemArray)
                                     {
-                                        <td>@item</td>
+                                        <td style="font-size:0.85rem;">@item</td>
                                     }
                                 </tr>
                             }
@@ -334,6 +389,7 @@
             }
         </div>
     </div>
+
 </div>
 
 @section Scripts {
