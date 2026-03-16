@@ -73,7 +73,7 @@ namespace CS_483_CSI_477.Services
                     temperature = 0.2,
                     topP = 0.9,
                     topK = 40,
-                    maxOutputTokens = 2048,
+                    maxOutputTokens = 4096,
                     candidateCount = 1
                 }
             };

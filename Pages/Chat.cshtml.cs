@@ -456,9 +456,9 @@ namespace CS_483_CSI_477.Pages
         // DB CONTEXT
         private async Task EnsureStudentContextLoadedAsync()
         {
-            LoadedStudentSummary = HttpContext.Session.GetString(STUDENT_CONTEXT_KEY);
-            if (!string.IsNullOrWhiteSpace(LoadedStudentSummary))
-                return;
+            // Always refresh context so planner changes are reflected
+            LoadedStudentSummary = null;
+            HttpContext.Session.Remove(STUDENT_CONTEXT_KEY);
 
             var sid = HttpContext.Session.GetInt32("StudentID");
             if (!sid.HasValue) return;
@@ -624,6 +624,49 @@ namespace CS_483_CSI_477.Pages
                 sb.AppendLine(holdMessage);
             }
 
+            // Current Degree Plan
+            sb.AppendLine();
+            sb.AppendLine("Current Degree Plan (PlannedCourses):");
+
+            var plannedSql = @"
+                SELECT 
+                    c.CourseCode,
+                    c.CourseName,
+                    c.CreditHours,
+                    pc.PlannedTerm,
+                    pc.PlannedYear,
+                    pc.IsCompleted
+                FROM PlannedCourses pc
+                JOIN Courses c ON pc.CourseID = c.CourseID
+                JOIN StudentDegreePlans sdp ON pc.PlanID = sdp.PlanID
+                WHERE sdp.StudentID = @studentId
+                  AND (sdp.IsActive = 1 OR sdp.IsActive IS NULL)
+                ORDER BY pc.PlannedYear,
+                 CASE WHEN pc.PlannedTerm = 'Spring' THEN 1
+                      WHEN pc.PlannedTerm = 'Summer' THEN 2
+                      WHEN pc.PlannedTerm = 'Fall'   THEN 3
+                      ELSE 4 END,
+                 c.CourseCode;";
+
+            var planned = _dbHelper.ExecuteQuery(plannedSql, new[]
+            {
+                new MySqlParameter("@studentId", MySqlDbType.Int32) { Value = studentId }
+            }, out var perr);
+
+            if (planned != null && planned.Rows.Count > 0)
+            {
+                foreach (DataRow r in planned.Rows)
+                {
+                    var completedTag = Convert.ToInt32(r["IsCompleted"]) == 1 ? " [COMPLETED]" : " [PLANNED]";
+                    sb.AppendLine($"- {r["CourseCode"]}: {r["CourseName"]} ({r["CreditHours"]} cr) — {r["PlannedTerm"]} {r["PlannedYear"]}{completedTag}");
+                }
+            }
+            else
+            {
+                sb.AppendLine("- (No planned courses yet)");
+            }
+
+            sb.AppendLine();
             sb.AppendLine("=== END STUDENT DB CONTEXT ===");
 
             return Task.FromResult(sb.ToString());
@@ -714,6 +757,33 @@ namespace CS_483_CSI_477.Pages
                         out var term2,
                         out var year2))
                 {
+                    // Validate term before executing add/move
+                    if (action == "add" || action == "move")
+                    {
+                        var termToCheck = action == "move" ? term2 : term1;
+                        var termValidationQuery = @"
+                            SELECT TypicalTermsOffered 
+                            FROM Courses 
+                            WHERE CourseCode = @code AND IsActive = 1 LIMIT 1;";
+
+                        var termResult = _dbHelper.ExecuteQuery(termValidationQuery, new[]
+                        {
+                            new MySqlParameter("@code", MySqlDbType.VarChar) { Value = code.Trim().ToUpper() }
+                        }, out _);
+
+                        if (termResult != null && termResult.Rows.Count > 0)
+                        {
+                            var termsOffered = termResult.Rows[0]["TypicalTermsOffered"]?.ToString() ?? "";
+                            if (!string.IsNullOrWhiteSpace(termsOffered))
+                            {
+                                var offered = termsOffered.Split(',').Select(t => t.Trim()).ToList();
+                                bool valid = offered.Any(t => t.Equals(termToCheck, StringComparison.OrdinalIgnoreCase));
+                                if (!valid)
+                                    return $"❌ {code.Trim().ToUpper()} is only offered in {termsOffered} and cannot be placed in a {termToCheck} semester.";
+                            }
+                        }
+                    }
+
                     PlannerCommandResult result = action switch
                     {
                         "add" => _plannerCommands.AddPlannedCourse(sid.Value, code, term1, year1),
@@ -746,6 +816,16 @@ namespace CS_483_CSI_477.Pages
             }
 
             var completedSet = ExtractCompletedCourseCodes(studentContext);
+
+            bool looksGraduation =
+            Regex.IsMatch(userMessage, @"\b(graduate|graduation|can i graduate|on track|finish|complete my degree|how many credits|credits left|credits remaining)\b",
+                RegexOptions.IgnoreCase);
+
+            if (looksGraduation)
+            {
+                var gradPrompt = BuildGraduationCheckPrompt(userMessage, studentContext, sid ?? 0);
+                return await _gemini.GenerateWithHistoryAsync(Messages, gradPrompt);
+            }
 
             bool looksPlanning =
                 Regex.IsMatch(userMessage, @"\b(next classes|what classes|what should i take|recommend|next semester|schedule)\b",
@@ -1239,5 +1319,98 @@ namespace CS_483_CSI_477.Pages
 
             return courses;
         }
+
+        private string BuildGraduationCheckPrompt(string userQuestion, string studentContext, int studentId)
+        {
+            var sb = new StringBuilder();
+
+            sb.AppendLine(@"
+            You are an AI Academic Advisor performing a graduation eligibility check.
+
+                STRICT RULES:
+                - Give a clear YES or NO on whether the student can graduate by their target date.
+                - List every remaining required course by name and code.
+                - List remaining credits needed.
+                - If they have account holds, warn them holds must be cleared before graduation.
+                - Be precise — use only the data provided below.
+                - Keep it concise and well formatted.
+
+                Output format:
+                ## Graduation Check
+                ## Remaining Required Courses
+                ## Credits Summary
+                ## Verdict
+                ## Notes
+            ".Trim());
+
+            sb.AppendLine();
+            sb.AppendLine("Student Snapshot:");
+            sb.AppendLine(ShortSnapshot(studentContext));
+            sb.AppendLine();
+
+            // Full completed courses
+            if (studentContext.Contains("Completed and In-Progress Courses:"))
+            {
+                var coursesSection = ExtractSection(studentContext, "Completed and In-Progress Courses:", "Core 39");
+                if (!string.IsNullOrEmpty(coursesSection))
+                {
+                    sb.AppendLine("Completed/In-Progress Courses:");
+                    sb.AppendLine(coursesSection.Trim());
+                    sb.AppendLine();
+                }
+            }
+
+            // Current degree plan
+            if (studentContext.Contains("Current Degree Plan"))
+            {
+                var planSection = ExtractSection(studentContext, "Current Degree Plan (PlannedCourses):", "=== END");
+                if (!string.IsNullOrEmpty(planSection))
+                {
+                    sb.AppendLine("Currently Planned Courses:");
+                    sb.AppendLine(planSection.Trim());
+                    sb.AppendLine();
+                }
+            }
+
+            // Core 39
+            if (studentContext.Contains("Core 39 General Education Progress:"))
+            {
+                var core39Section = ExtractSection(studentContext, "Core 39 General Education Progress:", "GPA Calculation");
+                if (!string.IsNullOrEmpty(core39Section))
+                {
+                    sb.AppendLine("Core 39 Progress:");
+                    sb.AppendLine(core39Section.Trim());
+                    sb.AppendLine();
+                }
+            }
+
+            // Remaining required courses from DB
+            var remaining = GetRemainingRequiredCourses(studentId);
+            sb.AppendLine("Remaining Required Courses (not yet completed or in progress):");
+            if (remaining.Count == 0)
+            {
+                sb.AppendLine("- NONE — all required courses completed!");
+            }
+            else
+            {
+                foreach (var (code, name, credits, category) in remaining)
+                    sb.AppendLine($"- {code}: {name} ({credits} cr) [{category}]");
+            }
+
+            sb.AppendLine();
+
+            // Credits summary
+            var creditsLine = studentContext.Split('\n')
+                .FirstOrDefault(l => l.Contains("Credits Earned:"));
+            if (creditsLine != null)
+                sb.AppendLine(creditsLine.Trim());
+
+            sb.AppendLine();
+            sb.AppendLine("Student Question:");
+            sb.AppendLine(userQuestion);
+
+            return sb.ToString();
+        }
+
     }
 }
