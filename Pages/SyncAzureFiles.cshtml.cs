@@ -24,6 +24,9 @@ namespace CS_483_CSI_477.Pages
 
         public IActionResult OnGet()
         {
+            if (!HttpContext.Session.GetInt32("AdminID").HasValue)
+                return RedirectToPage("/Login");
+
             if (HttpContext.Session.GetString("Role") != "Admin")
                 return RedirectToPage("/Login");
 
@@ -32,6 +35,9 @@ namespace CS_483_CSI_477.Pages
 
         public async Task<IActionResult> OnPostAsync()
         {
+            if (!HttpContext.Session.GetInt32("AdminID").HasValue)
+                return RedirectToPage("/Login");
+
             if (HttpContext.Session.GetString("Role") != "Admin")
                 return RedirectToPage("/Login");
 
@@ -91,12 +97,12 @@ namespace CS_483_CSI_477.Pages
 
                 var rows = _dbHelper.ExecuteNonQuery(insertSql, new[]
                 {
-                    new MySqlParameter("@academicYear", MySqlDbType.Int32) { Value = academicYear },
-                    new MySqlParameter("@fileName", MySqlDbType.VarChar) { Value = fileName },
-                    new MySqlParameter("@type", MySqlDbType.VarChar) { Value = bulletinType },
-                    new MySqlParameter("@category", MySqlDbType.VarChar) { Value = bulletinCategory },
-                    new MySqlParameter("@filePath", MySqlDbType.VarChar) { Value = filePath },
-                    new MySqlParameter("@fileSize", MySqlDbType.Int64) { Value = fileSize }
+                    new MySqlParameter("@academicYear", MySqlDbType.Int32)  { Value = academicYear },
+                    new MySqlParameter("@fileName",     MySqlDbType.VarChar) { Value = fileName },
+                    new MySqlParameter("@type",         MySqlDbType.VarChar) { Value = bulletinType },
+                    new MySqlParameter("@category",     MySqlDbType.VarChar) { Value = bulletinCategory },
+                    new MySqlParameter("@filePath",     MySqlDbType.VarChar) { Value = filePath },
+                    new MySqlParameter("@fileSize",     MySqlDbType.Int64)   { Value = fileSize }
                 }, out var err);
 
                 if (string.IsNullOrEmpty(err) && rows > 0)
@@ -145,10 +151,10 @@ namespace CS_483_CSI_477.Pages
 
                 var rows = _dbHelper.ExecuteNonQuery(insertSql, new[]
                 {
-                    new MySqlParameter("@academicYear", MySqlDbType.Int32) { Value = academicYear },
-                    new MySqlParameter("@fileName", MySqlDbType.VarChar) { Value = fileName },
-                    new MySqlParameter("@filePath", MySqlDbType.VarChar) { Value = filePath },
-                    new MySqlParameter("@fileSize", MySqlDbType.Int64) { Value = fileSize }
+                    new MySqlParameter("@academicYear", MySqlDbType.Int32)  { Value = academicYear },
+                    new MySqlParameter("@fileName",     MySqlDbType.VarChar) { Value = fileName },
+                    new MySqlParameter("@filePath",     MySqlDbType.VarChar) { Value = filePath },
+                    new MySqlParameter("@fileSize",     MySqlDbType.Int64)   { Value = fileSize }
                 }, out var err);
 
                 if (string.IsNullOrEmpty(err) && rows > 0)
@@ -197,10 +203,10 @@ namespace CS_483_CSI_477.Pages
 
                 var rows = _dbHelper.ExecuteNonQuery(insertSql, new[]
                 {
-                    new MySqlParameter("@academicYear", MySqlDbType.Int32) { Value = academicYear },
-                    new MySqlParameter("@fileName", MySqlDbType.VarChar) { Value = fileName },
-                    new MySqlParameter("@filePath", MySqlDbType.VarChar) { Value = filePath },
-                    new MySqlParameter("@fileSize", MySqlDbType.Int64) { Value = fileSize }
+                    new MySqlParameter("@academicYear", MySqlDbType.Int32)  { Value = academicYear },
+                    new MySqlParameter("@fileName",     MySqlDbType.VarChar) { Value = fileName },
+                    new MySqlParameter("@filePath",     MySqlDbType.VarChar) { Value = filePath },
+                    new MySqlParameter("@fileSize",     MySqlDbType.Int64)   { Value = fileSize }
                 }, out var err);
 
                 if (string.IsNullOrEmpty(err) && rows > 0)
@@ -217,23 +223,16 @@ namespace CS_483_CSI_477.Pages
 
         private string DetermineBulletinType(string fileName)
         {
-            // Map to the same values used elsewhere in the app (e.g. 'Undergraduate')
-            // to avoid INSERT errors when BulletinType is an ENUM in the DB.
-            if (fileName.Contains("Minor", StringComparison.OrdinalIgnoreCase))
-                return "Undergraduate";
-            if (fileName.Contains("Certificate", StringComparison.OrdinalIgnoreCase))
-                return "Certificate";
-            if (fileName.Contains("Major", StringComparison.OrdinalIgnoreCase))
-                return "Undergraduate";
+            if (fileName.Contains("Minor", StringComparison.OrdinalIgnoreCase)) return "Undergraduate";
+            if (fileName.Contains("Certificate", StringComparison.OrdinalIgnoreCase)) return "Certificate";
+            if (fileName.Contains("Major", StringComparison.OrdinalIgnoreCase)) return "Undergraduate";
             return "Undergraduate";
         }
 
         private string DetermineBulletinCategory(string fileName)
         {
-            if (fileName.Contains("Minor", StringComparison.OrdinalIgnoreCase))
-                return "Minor";
-            if (fileName.Contains("Core", StringComparison.OrdinalIgnoreCase))
-                return "Core39";
+            if (fileName.Contains("Minor", StringComparison.OrdinalIgnoreCase)) return "Minor";
+            if (fileName.Contains("Core", StringComparison.OrdinalIgnoreCase)) return "Core39";
             return "Major";
         }
     }

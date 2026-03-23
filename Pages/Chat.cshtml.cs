@@ -44,6 +44,9 @@ namespace CS_483_CSI_477.Pages
         private const string STUDENT_CONTEXT_KEY = "StudentContextText";
         private const string CATALOG_JSON_KEY = "ParsedCatalogJson";
         private const string BULLETIN_YEAR_KEY = "BulletinYear";
+        private const string ALT_PDF_PAGES_JSON_KEY = "AltPdfPagesJson";
+        private const string ALT_PDF_FILENAME_KEY = "AltPdfFileName";
+        private const string ALT_BULLETIN_YEAR_KEY = "AltBulletinYear";
         private readonly PrerequisiteService _prereqService;
         private readonly PlannerCommandService _plannerCommands;
         private readonly GpaCalculatorService _gpaCalc;
@@ -83,6 +86,8 @@ namespace CS_483_CSI_477.Pages
         {
             if (!HttpContext.Session.GetInt32("StudentID").HasValue)
                 return RedirectToPage("/Login");
+            if (HttpContext.Session.GetString("Role") == "Admin")
+                return RedirectToPage("/AdminDashboard");
 
             EnsureChatId();
 
@@ -100,6 +105,8 @@ namespace CS_483_CSI_477.Pages
         {
             if (!HttpContext.Session.GetInt32("StudentID").HasValue)
                 return RedirectToPage("/Login");
+            if (HttpContext.Session.GetString("Role") == "Admin")
+                return RedirectToPage("/AdminDashboard");
 
             EnsureChatId();
 
@@ -227,12 +234,9 @@ namespace CS_483_CSI_477.Pages
             EnsureChatId();
             await _chatLogStore.ClearAsync(ChatId);
 
+            // Clear chat session only — PDF stays loaded
             HttpContext.Session.Remove("ChatId");
-            HttpContext.Session.Remove(PDF_FILENAME_KEY);
-            HttpContext.Session.Remove(PDF_PAGES_JSON_KEY);
-            HttpContext.Session.Remove(CATALOG_JSON_KEY);
             HttpContext.Session.Remove(STUDENT_CONTEXT_KEY);
-            HttpContext.Session.Remove(BULLETIN_YEAR_KEY);
 
             return RedirectToPage();
         }
@@ -243,6 +247,9 @@ namespace CS_483_CSI_477.Pages
             HttpContext.Session.Remove(PDF_PAGES_JSON_KEY);
             HttpContext.Session.Remove(CATALOG_JSON_KEY);
             HttpContext.Session.Remove(BULLETIN_YEAR_KEY);
+            HttpContext.Session.Remove(ALT_PDF_PAGES_JSON_KEY);
+            HttpContext.Session.Remove(ALT_PDF_FILENAME_KEY);
+            HttpContext.Session.Remove(ALT_BULLETIN_YEAR_KEY);
             return RedirectToPage();
         }
 
@@ -343,7 +350,15 @@ namespace CS_483_CSI_477.Pages
                     return false;
 
                 var entryYear = Convert.ToInt32(enrollmentYear);
-                var bulletinYearNeeded = $"{entryYear}-{entryYear + 1}";
+                // Determine which bulletin year to use based on current semester
+                // Spring semester (Jan-Jul) = current academic year, Fall (Aug-Dec) = next academic year
+                var currentMonth = DateTime.Now.Month;
+                var currentCalendarYear = DateTime.Now.Year;
+                string bulletinYearNeeded;
+                if (currentMonth >= 8)
+                    bulletinYearNeeded = $"{currentCalendarYear}-{currentCalendarYear + 1}";
+                else
+                    bulletinYearNeeded = $"{currentCalendarYear - 1}-{currentCalendarYear}";
 
                 string majorKeyword = degreeCode switch
                 {
@@ -405,6 +420,83 @@ namespace CS_483_CSI_477.Pages
                 _logger.LogError(ex, "Failed to auto-load bulletin");
                 return false;
             }
+        }
+
+        private async Task<(List<PdfPageText> Pages, string FileName, string BulletinYear)> TryLoadBulletinForMajorAsync(string degreeCode)
+        {
+            // Check if already cached in alt session keys
+            var cachedJson = HttpContext.Session.GetString(ALT_PDF_PAGES_JSON_KEY);
+            var cachedFileName = HttpContext.Session.GetString(ALT_PDF_FILENAME_KEY) ?? "";
+            var cachedYear = HttpContext.Session.GetString(ALT_BULLETIN_YEAR_KEY) ?? "";
+
+            if (!string.IsNullOrEmpty(cachedJson) && cachedFileName.Contains(
+                degreeCode == "CIS-BS" ? "Computer Information" : "Computer Science",
+                StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var cachedPages = JsonSerializer.Deserialize<List<PdfPageText>>(cachedJson) ?? new();
+                    return (cachedPages, cachedFileName, cachedYear);
+                }
+                catch { }
+            }
+
+            // Determine bulletin year
+            var currentMonth = DateTime.Now.Month;
+            var currentCalendarYear = DateTime.Now.Year;
+            string bulletinYearNeeded = currentMonth >= 8
+                ? $"{currentCalendarYear}-{currentCalendarYear + 1}"
+                : $"{currentCalendarYear - 1}-{currentCalendarYear}";
+
+            string majorKeyword = degreeCode switch
+            {
+                "CS-BS" => "Computer Science",
+                "CIS-BS" => "Computer Information Systems",
+                _ => degreeCode
+            };
+
+            var bulletinQuery = @"
+                SELECT BulletinID, FileName, FilePath, BulletinYear
+                FROM Bulletins
+                WHERE IsActive = 1
+                AND BulletinCategory = 'Major'
+                AND FileName LIKE @majorKeyword
+                AND FileName NOT LIKE '%Minor%'
+                ORDER BY
+                    CASE WHEN BulletinYear = @bulletinYear THEN 0 ELSE 1 END,
+                    AcademicYear DESC
+                LIMIT 1";
+
+            var bulletin = _dbHelper.ExecuteQuery(bulletinQuery, new[]
+            {
+                new MySqlParameter("@bulletinYear", MySqlDbType.VarChar) { Value = bulletinYearNeeded },
+                new MySqlParameter("@majorKeyword", MySqlDbType.VarChar) { Value = $"%{majorKeyword}%" }
+            }, out var berr);
+
+            if (!string.IsNullOrEmpty(berr) || bulletin == null || bulletin.Rows.Count == 0)
+            {
+                _logger.LogWarning($"No bulletin found for {degreeCode}, year {bulletinYearNeeded}");
+                return (new List<PdfPageText>(), "", "");
+            }
+
+            var row = bulletin.Rows[0];
+            var fileName = row["FileName"].ToString() ?? "";
+            var filePath = row["FilePath"].ToString() ?? "";
+            var yearStr = row["BulletinYear"].ToString() ?? "";
+
+            var pdfBytes = await DownloadPdfFromPathAsync(filePath);
+            if (pdfBytes == null || pdfBytes.Length == 0)
+                return (new List<PdfPageText>(), "", "");
+
+            var extract = _pdfService.Extract(pdfBytes, fileName, maxPages: 25, maxCharsTotal: 200_000);
+
+            // Cache in alt session keys so next question about this major is instant
+            HttpContext.Session.SetString(ALT_PDF_PAGES_JSON_KEY, JsonSerializer.Serialize(extract.Pages));
+            HttpContext.Session.SetString(ALT_PDF_FILENAME_KEY, fileName);
+            HttpContext.Session.SetString(ALT_BULLETIN_YEAR_KEY, yearStr);
+
+            _logger.LogInformation($"On-demand loaded bulletin: {fileName} ({yearStr})");
+            return (extract.Pages, fileName, yearStr);
         }
 
         private async Task<byte[]?> DownloadPdfFromPathAsync(string filePath)
@@ -854,10 +946,44 @@ namespace CS_483_CSI_477.Pages
                 return await _gemini.GenerateWithHistoryAsync(Messages, prompt);
             }
 
-            // General question - use RAG to find relevant bulletin content
-            var ragHits = _ragService.FindTopRelevantSnippets(pdfPages, userMessage, topK: 3, snippetMaxChars: 600);
+            // Detect major switch questions — load the other major's bulletin on demand
+            bool looksMajorSwitch = Regex.IsMatch(userMessage,
+                @"\b(switch(ing)?|chang(e|ing)|transfer(ring)?|move|moving)\b.{0,40}\b(major|cis|cs|computer information|computer science)\b",
+                RegexOptions.IgnoreCase)
+                || Regex.IsMatch(userMessage,
+                @"\b(cis|computer information systems)\b.{0,40}\b(major|require|course|curriculum|degree)\b",
+                RegexOptions.IgnoreCase);
 
-            var bulletinYear = HttpContext.Session.GetString(BULLETIN_YEAR_KEY) ?? null;
+            List<PdfPageText> ragPages = pdfPages;
+            string ragPdfName = PdfFileName ?? "Bulletin";
+            string ragYear = HttpContext.Session.GetString(BULLETIN_YEAR_KEY) ?? "Unknown";
+
+            if (looksMajorSwitch)
+            {
+                // Determine which major they're asking about
+                bool askingAboutCis = Regex.IsMatch(userMessage,
+                    @"\b(cis|computer information)\b", RegexOptions.IgnoreCase);
+
+                var studentMajor = HttpContext.Session.GetString("StudentMajor") ?? "";
+                bool studentIsCis = studentMajor.Contains("Information", StringComparison.OrdinalIgnoreCase);
+
+                // Load the other major's bulletin
+                string targetDegreeCode = (askingAboutCis && !studentIsCis) ? "CIS-BS" : "CS-BS";
+                var (altPages, altFileName, altYear) = await TryLoadBulletinForMajorAsync(targetDegreeCode);
+
+                if (altPages.Count > 0)
+                {
+                    ragPages = altPages;
+                    ragPdfName = altFileName;
+                    ragYear = altYear;
+                    _logger.LogInformation($"Major switch detected — using bulletin: {altFileName}");
+                }
+            }
+
+            // General question - use RAG to find relevant bulletin content
+            var ragHits = _ragService.FindTopRelevantSnippets(ragPages, userMessage, topK: 3, snippetMaxChars: 600);
+
+            var bulletinYear = ragYear;
             var supportingDocs = await _docsRagService.SearchSupportingDocsAsync(
                 userMessage,
                 courseCode: null,
@@ -872,7 +998,7 @@ namespace CS_483_CSI_477.Pages
             var generalPrompt = BuildGeneralPromptWithRAG(
                 userMessage,
                 studentContext,
-                PdfFileName ?? "Uploaded PDF",
+                ragPdfName,
                 plan,
                 ragHits,
                 supportingDocs);
@@ -885,8 +1011,7 @@ namespace CS_483_CSI_477.Pages
 
             if (ragHits.Count > 0 || supportingDocs.Count > 0)
             {
-                var yearForCitation = HttpContext.Session.GetString(BULLETIN_YEAR_KEY) ?? "Unknown";
-                var citations = BuildCitationsWithDocs(ragHits, PdfFileName ?? "Bulletin", yearForCitation, supportingDocs);
+                var citations = BuildCitationsWithDocs(ragHits, ragPdfName, ragYear, supportingDocs);
                 response += $"\n\n{citations}";
             }
 
@@ -968,7 +1093,7 @@ namespace CS_483_CSI_477.Pages
                 STRICT RULES:
                 - You may ONLY recommend courses listed in PROVIDED RECOMMENDED COURSES below.
                 - Do NOT recommend courses from other majors (e.g., don't recommend Nursing courses to CS majors).
-                - ONLY recommend courses relevant to the student's major, minor, or Core 39 requirements.
+                - ONLY recommend courses relevant to the student's major or Core 39 requirements. Do NOT recommend or invent minor requirements unless a minor is explicitly declared in the student's profile.
                 - Recommend 12-15 credits per semester UNLESS the student has fewer credits remaining to graduate.
                 - If student needs less than 12 credits to graduate, recommend only the remaining courses.
                 - If the student context contains ACCOUNT HOLDS, you MUST lead your response with the hold warning BEFORE any course recommendations.

@@ -1,9 +1,10 @@
 ﻿using AdvisorDb;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using CS_483_CSI_477.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Configuration;
+using MySql.Data.MySqlClient;
 using System.Data;
 
 namespace CS_483_CSI_477.Pages;
@@ -12,6 +13,7 @@ public class AdminDashboardModel : PageModel
 {
     private readonly DatabaseHelper _dbHelper;
     private readonly IConfiguration _config;
+    private readonly AccountHoldService _holdService;
 
     // Connection status
     public bool IsConnected { get; set; }
@@ -28,46 +30,45 @@ public class AdminDashboardModel : PageModel
     public string UploadMessage { get; set; } = string.Empty;
     public bool UploadSuccess { get; set; }
 
+    // Hold management
+    public string HoldMessage { get; set; } = string.Empty;
+    public bool HoldSuccess { get; set; }
+    public DataTable? StudentHolds { get; set; }
+    public int ViewedStudentId { get; set; }
+    public string ViewedStudentName { get; set; } = string.Empty;
+
+    [BindProperty] public string HoldType { get; set; } = string.Empty;
+    [BindProperty] public string HoldReason { get; set; } = string.Empty;
+    [BindProperty] public int HoldStudentId { get; set; }
+
     // Bulletin and document lists from DB
     public DataTable? Bulletins { get; set; }
     public DataTable? Documents { get; set; }
 
     // Upload form fields
-    [BindProperty]
-    public int BulletinYear { get; set; } = DateTime.Now.Year;
-    [BindProperty]
-    public string BulletinCategory { get; set; } = "Major";
-    [BindProperty]
-    public string BulletinDescription { get; set; } = string.Empty;
-    [BindProperty]
-    public string DocType { get; set; } = "Syllabus";
-    [BindProperty]
-    public string CourseCode { get; set; } = string.Empty;
-    [BindProperty]
-    public string DocDescription { get; set; } = string.Empty;
+    [BindProperty] public int BulletinYear { get; set; } = DateTime.Now.Year;
+    [BindProperty] public string BulletinCategory { get; set; } = "Major";
+    [BindProperty] public string BulletinDescription { get; set; } = string.Empty;
+    [BindProperty] public string DocType { get; set; } = "Syllabus";
+    [BindProperty] public string CourseCode { get; set; } = string.Empty;
+    [BindProperty] public string DocDescription { get; set; } = string.Empty;
 
-    public AdminDashboardModel(DatabaseHelper dbHelper, IConfiguration config)
+    public AdminDashboardModel(DatabaseHelper dbHelper, IConfiguration config, AccountHoldService holdService)
     {
         _dbHelper = dbHelper;
         _config = config;
+        _holdService = holdService;
     }
 
-    public IActionResult OnGet()
+    public IActionResult OnGet(int? viewStudentId = null)
     {
-        // Redirect to login if not authenticated
         if (!HttpContext.Session.GetInt32("AdminID").HasValue)
-        {
             return RedirectToPage("/Login");
-        }
 
-        // Check if user is admin
         string role = HttpContext.Session.GetString("Role") ?? "";
         if (role != "Admin")
-        {
             return RedirectToPage("/StudentDashboard");
-        }
 
-        // Test connection and load data
         IsConnected = _dbHelper.TestConnection(out string error);
         ConnectionMessage = IsConnected ? "✓ Database connected successfully" : "";
         ErrorMessage = IsConnected ? "" : $"Database connection failed: {error}";
@@ -76,15 +77,24 @@ public class AdminDashboardModel : PageModel
         {
             LoadBulletins();
             LoadDocuments();
+
+            // If returning from a hold action, reload that student's holds
+            if (viewStudentId.HasValue && viewStudentId.Value > 0)
+            {
+                ViewedStudentId = viewStudentId.Value;
+                LoadStudentHolds(viewStudentId.Value);
+            }
         }
 
         return Page();
     }
 
-    // POST: Student Lookup
-    //-------------------------
+    // ── Student Search ────────────────────────────────────────────────────
     public IActionResult OnPostSearch()
     {
+        if (!HttpContext.Session.GetInt32("AdminID").HasValue)
+            return RedirectToPage("/Login");
+
         IsConnected = _dbHelper.TestConnection(out string error);
         if (!IsConnected)
         {
@@ -94,25 +104,61 @@ public class AdminDashboardModel : PageModel
 
         if (string.IsNullOrWhiteSpace(StudentId))
         {
-            SearchMessage = "Please enter a Student ID.";
+            SearchMessage = "Please enter a name, Student ID, or email.";
             LoadBulletins(); LoadDocuments();
             return Page();
         }
 
-        string query = $@"
-            SELECT s.StudentID, s.FirstName, s.LastName, s.Email,
-                   s.Major, s.CurrentGPA, s.TotalCreditsEarned, s.EnrollmentStatus
-            FROM Students s
-            WHERE s.StudentID = '{MySqlEscape(StudentId)}'
-               OR s.Email = '{MySqlEscape(StudentId)}'
-            LIMIT 10";
+        string escaped = MySqlEscape(StudentId.Trim());
+        bool isNumeric = StudentId.Trim().All(char.IsDigit);
+
+        string query;
+        if (isNumeric)
+        {
+            // Search by StudentID
+            query = $@"
+                SELECT s.StudentID, 
+                       CONCAT(s.FirstName, ' ', s.LastName) AS StudentName,
+                       s.Email, s.Major, s.CurrentGPA,
+                       s.TotalCreditsEarned, s.EnrollmentStatus
+                FROM Students s
+                WHERE s.StudentID = '{escaped}'
+                LIMIT 20";
+        }
+        else if (StudentId.Contains("@"))
+        {
+            // Search by email
+            query = $@"
+                SELECT s.StudentID,
+                       CONCAT(s.FirstName, ' ', s.LastName) AS StudentName,
+                       s.Email, s.Major, s.CurrentGPA,
+                       s.TotalCreditsEarned, s.EnrollmentStatus
+                FROM Students s
+                WHERE s.Email = '{escaped}'
+                LIMIT 20";
+        }
+        else
+        {
+            // Search by name (first, last, or full)
+            query = $@"
+                SELECT s.StudentID,
+                       CONCAT(s.FirstName, ' ', s.LastName) AS StudentName,
+                       s.Email, s.Major, s.CurrentGPA,
+                       s.TotalCreditsEarned, s.EnrollmentStatus
+                FROM Students s
+                WHERE s.FirstName  LIKE '%{escaped}%'
+                   OR s.LastName   LIKE '%{escaped}%'
+                   OR CONCAT(s.FirstName, ' ', s.LastName) LIKE '%{escaped}%'
+                ORDER BY s.LastName, s.FirstName
+                LIMIT 20";
+        }
 
         StudentResults = _dbHelper.ExecuteQuery(query, out string queryError);
 
         if (!string.IsNullOrEmpty(queryError))
             ErrorMessage = $"Search error: {queryError}";
         else if (StudentResults == null || StudentResults.Rows.Count == 0)
-            SearchMessage = "No student found with that ID or email.";
+            SearchMessage = "No student found matching that search.";
         else
             SearchMessage = $"Found {StudentResults.Rows.Count} record(s).";
 
@@ -120,16 +166,58 @@ public class AdminDashboardModel : PageModel
         return Page();
     }
 
-    // POST: Upload Bulletin PDF to Azure Blob
-    // ----------------------------------------
+    // ── Add Account Hold ─────────────────────────────────────────────────
+    public IActionResult OnPostAddHold()
+    {
+        if (!HttpContext.Session.GetInt32("AdminID").HasValue)
+            return RedirectToPage("/Login");
+
+        int adminId = HttpContext.Session.GetInt32("AdminID") ?? 0;
+
+        if (HoldStudentId <= 0 || string.IsNullOrWhiteSpace(HoldType) || string.IsNullOrWhiteSpace(HoldReason))
+        {
+            HoldMessage = "Hold type, reason, and student ID are all required.";
+            HoldSuccess = false;
+            LoadBulletins(); LoadDocuments();
+            LoadStudentHolds(HoldStudentId);
+            ViewedStudentId = HoldStudentId;
+            return Page();
+        }
+
+        bool success = _holdService.AddHold(HoldStudentId, HoldType, HoldReason, adminId);
+        HoldMessage = success ? "Hold added successfully." : "Failed to add hold.";
+        HoldSuccess = success;
+
+        return RedirectToPage(new { viewStudentId = HoldStudentId });
+    }
+
+    // ── Remove Account Hold ───────────────────────────────────────────────
+    public IActionResult OnPostRemoveHold(int holdId, int studentId)
+    {
+        if (!HttpContext.Session.GetInt32("AdminID").HasValue)
+            return RedirectToPage("/Login");
+
+        if (holdId <= 0 || studentId <= 0)
+            return RedirectToPage();
+
+        _holdService.RemoveHold(holdId, studentId);
+        return RedirectToPage(new { viewStudentId = studentId });
+    }
+
+    // ── Load Student Holds (for hold management panel) ────────────────────
+    public IActionResult OnPostViewHolds(int studentId)
+    {
+        if (!HttpContext.Session.GetInt32("AdminID").HasValue)
+            return RedirectToPage("/Login");
+
+        return RedirectToPage(new { viewStudentId = studentId });
+    }
+
+    // ── Upload Bulletin PDF ───────────────────────────────────────────────
     public async Task<IActionResult> OnPostUploadBulletinAsync()
     {
         IsConnected = _dbHelper.TestConnection(out string error);
-        if (!IsConnected)
-        {
-            ErrorMessage = $"Connection failed: {error}";
-            return Page();
-        }
+        if (!IsConnected) { ErrorMessage = $"Connection failed: {error}"; return Page(); }
 
         var file = Request.Form.Files["bulletinFile"];
         if (file == null || file.Length == 0)
@@ -152,25 +240,20 @@ public class AdminDashboardModel : PageModel
         try
         {
             var azureConnStr = _config["AzureBlobStorage:ConnectionString"];
-
-            // Route to correct container based on category
             string containerName = BulletinCategory switch
             {
                 "Minor" => "minors",
-                _ => "bulletins" // Major, Core39, General
+                _ => "bulletins"
             };
-            // DEBUG: Use logger instead of Console
+
             var logger = HttpContext.RequestServices.GetRequiredService<ILogger<AdminDashboardModel>>();
             logger.LogWarning("=== AZURE DEBUG ===");
             logger.LogWarning($"Connection String Length: {azureConnStr?.Length ?? 0}");
-            logger.LogWarning($"Is Null or Empty: {string.IsNullOrEmpty(azureConnStr)}");
             logger.LogWarning($"Container Name: {containerName}");
             logger.LogWarning($"Category: {BulletinCategory}");
             logger.LogWarning("===================");
 
             string fileUrl;
-
-            // If Azure not yet configured, save locally instead
             if (string.IsNullOrEmpty(azureConnStr))
             {
                 string localFolder = BulletinCategory == "Minor" ? "minors" : "bulletins";
@@ -181,20 +264,14 @@ public class AdminDashboardModel : PageModel
                 var blobClient = new BlobServiceClient(azureConnStr);
                 var container = blobClient.GetBlobContainerClient(containerName);
                 await container.CreateIfNotExistsAsync(PublicAccessType.None);
-
                 var blobName = $"{BulletinYear}/Bulletin_{BulletinYear}_{Guid.NewGuid()}{ext}";
                 var blob = container.GetBlobClient(blobName);
                 using var stream = file.OpenReadStream();
-                await blob.UploadAsync(stream, new BlobHttpHeaders
-                {
-                    ContentType = "application/pdf"
-                });
+                await blob.UploadAsync(stream, new BlobHttpHeaders { ContentType = "application/pdf" });
                 fileUrl = blob.Uri.ToString();
             }
 
-            // Save metadata to MySQL
             string bulletinYearFormatted = $"{BulletinYear}-{BulletinYear + 1}";
-
             string insert = $@"
                 INSERT INTO Bulletins 
                     (AcademicYear, BulletinYear, BulletinType, BulletinCategory, FileName, FilePath, FileSize, UploadedBy, Description)
@@ -204,17 +281,8 @@ public class AdminDashboardModel : PageModel
                     '{MySqlEscape(BulletinDescription ?? $"{BulletinCategory} Bulletin {bulletinYearFormatted}")}')";
 
             int rows = _dbHelper.ExecuteNonQuery(insert, out string dbError);
-
-            if (rows > 0)
-            {
-                UploadMessage = $"✓ Bulletin for {BulletinYear} uploaded successfully!";
-                UploadSuccess = true;
-            }
-            else
-            {
-                UploadMessage = $"File uploaded but DB save failed: {dbError}";
-                UploadSuccess = false;
-            }
+            UploadMessage = rows > 0 ? $"✓ Bulletin for {BulletinYear} uploaded successfully!" : $"File uploaded but DB save failed: {dbError}";
+            UploadSuccess = rows > 0;
         }
         catch (Exception ex)
         {
@@ -226,16 +294,11 @@ public class AdminDashboardModel : PageModel
         return Page();
     }
 
-    // POST: Upload Supporting Document
-    // ---------------------------------
+    // ── Upload Supporting Document ────────────────────────────────────────
     public async Task<IActionResult> OnPostUploadDocumentAsync()
     {
         IsConnected = _dbHelper.TestConnection(out string error);
-        if (!IsConnected)
-        {
-            ErrorMessage = $"Connection failed: {error}";
-            return Page();
-        }
+        if (!IsConnected) { ErrorMessage = $"Connection failed: {error}"; return Page(); }
 
         var file = Request.Form.Files["documentFile"];
         if (file == null || file.Length == 0)
@@ -259,13 +322,10 @@ public class AdminDashboardModel : PageModel
         try
         {
             var azureConnStr = _config["AzureBlobStorage:ConnectionString"];
-            var containerName = _config["AzureBlobStorage:SupportingDocsContainer"]
-                                ?? "supporting-docs";
-
+            var containerName = _config["AzureBlobStorage:SupportingDocsContainer"] ?? "supporting-docs";
             string fileUrl;
 
-            if (string.IsNullOrEmpty(azureConnStr) ||
-                azureConnStr == "PASTE_KEY_HERE")
+            if (string.IsNullOrEmpty(azureConnStr) || azureConnStr == "PASTE_KEY_HERE")
             {
                 fileUrl = await SaveLocalAsync(file, "documents", DocType.ToLower());
             }
@@ -274,17 +334,11 @@ public class AdminDashboardModel : PageModel
                 var blobClient = new BlobServiceClient(azureConnStr);
                 var container = blobClient.GetBlobContainerClient(containerName);
                 await container.CreateIfNotExistsAsync(PublicAccessType.None);
-
-                var prefix = string.IsNullOrEmpty(CourseCode)
-                               ? "doc"
-                               : CourseCode.Replace(" ", "_");
+                var prefix = string.IsNullOrEmpty(CourseCode) ? "doc" : CourseCode.Replace(" ", "_");
                 var blobName = $"{DocType.ToLower()}/{prefix}_{Guid.NewGuid()}{ext}";
                 var blob = container.GetBlobClient(blobName);
                 using var stream = file.OpenReadStream();
-                await blob.UploadAsync(stream, new BlobHttpHeaders
-                {
-                    ContentType = file.ContentType
-                });
+                await blob.UploadAsync(stream, new BlobHttpHeaders { ContentType = file.ContentType });
                 fileUrl = blob.Uri.ToString();
             }
 
@@ -298,10 +352,7 @@ public class AdminDashboardModel : PageModel
                      '{MySqlEscape(DocDescription ?? DocType + " document")}')";
 
             int rows = _dbHelper.ExecuteNonQuery(insert, out string dbError);
-
-            UploadMessage = rows > 0
-                ? $"✓ Document uploaded successfully!"
-                : $"File uploaded but DB save failed: {dbError}";
+            UploadMessage = rows > 0 ? "✓ Document uploaded successfully!" : $"File uploaded but DB save failed: {dbError}";
             UploadSuccess = rows > 0;
         }
         catch (Exception ex)
@@ -314,51 +365,52 @@ public class AdminDashboardModel : PageModel
         return Page();
     }
 
-    // POST: Delete a Bulletin
-    // -------------------------
+    // ── Delete Bulletin ───────────────────────────────────────────────────
     public IActionResult OnPostDeleteBulletin(int id)
     {
-        _dbHelper.ExecuteNonQuery(
-            $"UPDATE Bulletins SET IsActive=0 WHERE BulletinID={id}", out _);
+        _dbHelper.ExecuteNonQuery($"UPDATE Bulletins SET IsActive=0 WHERE BulletinID={id}", out _);
         return RedirectToPage();
     }
 
-    // POST: Delete a Document
-    // ----------------------------
+    // ── Delete Document ───────────────────────────────────────────────────
     public IActionResult OnPostDeleteDocument(int id)
     {
-        _dbHelper.ExecuteNonQuery(
-            $"UPDATE SupportingDocuments SET IsActive=0 WHERE DocumentID={id}", out _);
+        _dbHelper.ExecuteNonQuery($"UPDATE SupportingDocuments SET IsActive=0 WHERE DocumentID={id}", out _);
         return RedirectToPage();
     }
 
-    // Helpers
-    // ----------
+    // ── Helpers ───────────────────────────────────────────────────────────
     private void LoadBulletins()
     {
         Bulletins = _dbHelper.ExecuteQuery(
             @"SELECT BulletinID, AcademicYear, BulletinCategory, FileName, FileSize, UploadDate, Description 
-              FROM Bulletins 
-              WHERE IsActive=1 
-              ORDER BY BulletinCategory, AcademicYear DESC",
-            out _);
+              FROM Bulletins WHERE IsActive=1 
+              ORDER BY BulletinCategory, AcademicYear DESC", out _);
     }
 
     private void LoadDocuments()
     {
         Documents = _dbHelper.ExecuteQuery(
             @"SELECT DocumentID, DocumentName, DocumentType, CourseCode, FileSize, UploadDate 
-              FROM SupportingDocuments 
-              WHERE IsActive=1 
-              ORDER BY UploadDate DESC",
-            out _);
+              FROM SupportingDocuments WHERE IsActive=1 
+              ORDER BY UploadDate DESC", out _);
     }
 
-    private async Task<string> SaveLocalAsync(
-        IFormFile file, string folder, string subfolder)
+    private void LoadStudentHolds(int studentId)
     {
-        var uploadPath = Path.Combine(
-            Directory.GetCurrentDirectory(), "wwwroot", "uploads", folder, subfolder);
+        StudentHolds = _holdService.GetActiveHolds(studentId);
+
+        // Also get the student name for the panel header
+        var nameResult = _dbHelper.ExecuteQuery(
+            $"SELECT CONCAT(FirstName, ' ', LastName) AS FullName FROM Students WHERE StudentID = {studentId} LIMIT 1",
+            out _);
+        if (nameResult != null && nameResult.Rows.Count > 0)
+            ViewedStudentName = nameResult.Rows[0]["FullName"].ToString() ?? "";
+    }
+
+    private async Task<string> SaveLocalAsync(IFormFile file, string folder, string subfolder)
+    {
+        var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", folder, subfolder);
         Directory.CreateDirectory(uploadPath);
         var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
         var fullPath = Path.Combine(uploadPath, fileName);

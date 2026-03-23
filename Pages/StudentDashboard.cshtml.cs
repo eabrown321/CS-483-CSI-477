@@ -2,13 +2,14 @@ using AdvisorDb;
 using CS_483_CSI_477.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using System.Data;
 
 namespace CS_483_CSI_477.Pages
 {
     public class StudentDashboardModel : PageModel
     {
         private readonly DatabaseHelper _dbHelper;
+        private readonly PrerequisiteService _prereqService;
+        private readonly AccountHoldService _accountHoldService;
 
         public string StudentName { get; set; } = string.Empty;
         public string Major { get; set; } = string.Empty;
@@ -16,22 +17,24 @@ namespace CS_483_CSI_477.Pages
         public int TotalCreditsEarned { get; set; }
         public int CoursesCompleted { get; set; }
         public string EnrollmentStatus { get; set; } = string.Empty;
+        public bool HasAccountHolds { get; set; }
+        public string AccountHoldMessage { get; set; } = string.Empty;
 
-        private readonly PrerequisiteService _prereqService;
-
-        public StudentDashboardModel(DatabaseHelper dbHelper, PrerequisiteService prereqService)
+        public StudentDashboardModel(DatabaseHelper dbHelper, PrerequisiteService prereqService, AccountHoldService accountHoldService)
         {
             _dbHelper = dbHelper;
             _prereqService = prereqService;
+            _accountHoldService = accountHoldService;
         }
 
         public IActionResult OnGet()
         {
-            // Redirect to login if not authenticated
             if (!HttpContext.Session.GetInt32("StudentID").HasValue)
-            {
                 return RedirectToPage("/Login");
-            }
+
+            // Prevent admins from landing on student pages
+            if (HttpContext.Session.GetString("Role") == "Admin")
+                return RedirectToPage("/AdminDashboard");
 
             LoadStudentInfo();
             return Page();
@@ -39,7 +42,6 @@ namespace CS_483_CSI_477.Pages
 
         private void LoadStudentInfo()
         {
-            // Get logged-in student ID from session
             int studentId = HttpContext.Session.GetInt32("StudentID") ?? 0;
 
             string query = $@"
@@ -53,7 +55,6 @@ namespace CS_483_CSI_477.Pages
                 WHERE s.StudentID = {studentId}";
 
             var result = _dbHelper.ExecuteQuery(query, out _);
-
             if (result != null && result.Rows.Count > 0)
             {
                 var row = result.Rows[0];
@@ -64,7 +65,6 @@ namespace CS_483_CSI_477.Pages
                 EnrollmentStatus = row["EnrollmentStatus"].ToString() ?? "Active";
             }
 
-            // Count completed courses
             string courseQuery = $@"
                 SELECT COUNT(*) as CourseCount
                 FROM StudentCourseHistory
@@ -72,11 +72,12 @@ namespace CS_483_CSI_477.Pages
                   AND Status = 'Completed'";
 
             var courseResult = _dbHelper.ExecuteQuery(courseQuery, out _);
-
             if (courseResult != null && courseResult.Rows.Count > 0)
-            {
                 CoursesCompleted = int.Parse(courseResult.Rows[0]["CourseCount"].ToString() ?? "0");
-            }
+
+            HasAccountHolds = _accountHoldService.HasActiveHolds(studentId);
+            if (HasAccountHolds)
+                AccountHoldMessage = _accountHoldService.GetActiveHoldsMessage(studentId);
         }
     }
 }

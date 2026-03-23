@@ -7,6 +7,19 @@
 
 <div class="fade-in-up">
 
+    @if (Model.HasAccountHolds)
+    {
+        <div class="alert alert-danger d-flex align-items-start gap-3 mb-4 p-3"
+             style="border-radius:12px; border-left:5px solid #dc2626; background:#fef2f2;"
+             role="alert" aria-live="polite">
+            <i class="bi bi-exclamation-triangle-fill fs-4 text-danger mt-1" aria-hidden="true"></i>
+            <div>
+                <strong style="color:#dc2626;">Account Hold Detected</strong>
+                <div style="white-space:pre-line; font-size:0.875rem; color:#7f1d1d; margin-top:0.25rem;">@Model.AccountHoldMessage</div>
+            </div>
+        </div>
+    }
+
     <!-- Welcome Banner -->
     <div class="welcome-banner mb-4">
         <div class="gold-tag">

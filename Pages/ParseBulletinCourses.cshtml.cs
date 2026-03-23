@@ -23,6 +23,9 @@ namespace CS_483_CSI_477.Pages
 
         public IActionResult OnGet()
         {
+            if (!HttpContext.Session.GetInt32("AdminID").HasValue)
+                return RedirectToPage("/Login");
+
             if (HttpContext.Session.GetString("Role") != "Admin")
                 return RedirectToPage("/Login");
 
@@ -31,6 +34,9 @@ namespace CS_483_CSI_477.Pages
 
         public async Task<IActionResult> OnPostAsync()
         {
+            if (!HttpContext.Session.GetInt32("AdminID").HasValue)
+                return RedirectToPage("/Login");
+
             if (HttpContext.Session.GetString("Role") != "Admin")
                 return RedirectToPage("/Login");
 
@@ -70,7 +76,6 @@ namespace CS_483_CSI_477.Pages
                 Results.Add($"Parsing: {fileName} ({category})...");
 
                 var courses = await _parser.ParseBulletinFromAzure(filePath);
-
                 if (courses.Count > 0)
                 {
                     var inserted = _parser.InsertCoursesIntoDatabase(courses, fileName);
@@ -85,8 +90,7 @@ namespace CS_483_CSI_477.Pages
             }
 
             Results.Add("");
-            Results.Add($" Complete! Parsed {BulletinsParsed} bulletins, added {TotalCoursesAdded} new courses to database");
-
+            Results.Add($"Complete! Parsed {BulletinsParsed} bulletins, added {TotalCoursesAdded} new courses to database");
             return Page();
         }
     }

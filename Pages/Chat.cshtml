@@ -14,13 +14,17 @@
         </h5>
         <div class="d-flex gap-2">
             <form method="post" asp-page-handler="RemovePdf" class="d-inline">
-                <button type="submit" class="btn btn-sm btn-outline-secondary" aria-label="Remove uploaded PDF">
+                <button type="submit" class="btn btn-sm btn-outline-secondary"
+                        aria-label="Remove uploaded PDF"
+                        @(string.IsNullOrEmpty(Model.PdfFileName) ? "disabled" : "")>
                     <i class="bi bi-file-earmark-x me-1" aria-hidden="true"></i>Remove PDF
                 </button>
             </form>
             <form method="post" asp-page-handler="Clear" class="d-inline">
-                <button type="submit" class="btn btn-sm btn-outline-secondary" aria-label="Clear chat history">
-                    <i class="bi bi-trash me-1" aria-hidden="true"></i>Clear
+                <button type="submit" class="btn btn-sm btn-outline-secondary"
+                        aria-label="Clear chat history"
+                        @(Model.Messages.Count == 0 ? "disabled" : "")>
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i>Clear Chat
                 </button>
             </form>
         </div>
@@ -117,7 +121,7 @@
                        autocomplete="off"
                        style="border-radius:10px 0 0 10px; border-right:none;"
                        aria-label="Type your message" />
-                <button type="submit" class="chat-send-btn" aria-label="Send message">
+                <button type="submit" id="sendBtn" class="chat-send-btn" aria-label="Send message" disabled>
                     <i class="bi bi-send-fill" aria-hidden="true"></i>
                 </button>
             </div>
@@ -139,18 +143,30 @@
         var chatMessages = document.getElementById('chatMessages');
         if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
 
-        // Clear input on load and focus
-        window.addEventListener('load', function () {
-            var input = document.getElementById('userMessageInput');
-            if (input) { input.value = ''; input.focus(); }
-        });
+        // Send button enable/disable based on input
+        var userInput = document.getElementById('userMessageInput');
+        var sendBtn   = document.getElementById('sendBtn');
+
+        function updateSendBtn() {
+            if (userInput && sendBtn)
+                sendBtn.disabled = !userInput.value.trim();
+        }
+
+        if (userInput) {
+            userInput.addEventListener('input', updateSendBtn);
+            // Clear input on load and focus
+            window.addEventListener('load', function () {
+                userInput.value = '';
+                userInput.focus();
+                updateSendBtn();
+            });
+        }
 
         // Show loading on submit
         var chatForm = document.getElementById('chatForm');
         if (chatForm) {
             chatForm.addEventListener('submit', function (e) {
-                var input = document.getElementById('userMessageInput');
-                if (!input || !input.value.trim()) { e.preventDefault(); return; }
+                if (!userInput || !userInput.value.trim()) { e.preventDefault(); return; }
                 window.showAiLoading();
             });
         }

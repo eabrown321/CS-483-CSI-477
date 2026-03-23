@@ -53,6 +53,10 @@ namespace CS_483_CSI_477.Pages
             if (!sid.HasValue)
                 return RedirectToPage("/Login");
 
+            // Prevent admins from landing on student pages
+            if (HttpContext.Session.GetString("Role") == "Admin")
+                return RedirectToPage("/AdminDashboard");
+
             LoadProfile(sid.Value);
             LoadCourseHistory(sid.Value);
             return Page();
@@ -94,7 +98,6 @@ namespace CS_483_CSI_477.Pages
             var lastName = row["LastName"]?.ToString() ?? "";
             Initials = $"{(firstName.Length > 0 ? firstName[0] : ' ')}{(lastName.Length > 0 ? lastName[0] : ' ')}".Trim().ToUpperInvariant();
 
-            // Check for profile photo in Azure
             ProfilePhotoUrl = GetProfilePhotoUrl(studentId);
         }
 
@@ -137,7 +140,6 @@ namespace CS_483_CSI_477.Pages
 
         private string? GetProfilePhotoUrl(int studentId)
         {
-            // Check if a profile photo exists in the DB or Azure
             var sql = "SELECT ProfilePhotoUrl FROM Students WHERE StudentID = @sid LIMIT 1";
             var result = _dbHelper.ExecuteQuery(sql, new[]
             {
@@ -155,6 +157,7 @@ namespace CS_483_CSI_477.Pages
         {
             var sid = HttpContext.Session.GetInt32("StudentID");
             if (!sid.HasValue) return RedirectToPage("/Login");
+            if (HttpContext.Session.GetString("Role") == "Admin") return RedirectToPage("/AdminDashboard");
 
             NewEmail = (NewEmail ?? "").Trim().ToLowerInvariant();
             CurrentPassword = (CurrentPassword ?? "").Trim();
@@ -177,20 +180,18 @@ namespace CS_483_CSI_477.Pages
                 return RedirectToPage();
             }
 
-            // Verify current password
             if (!VerifyPassword(sid.Value, CurrentPassword))
             {
                 TempData["ProfileError"] = "Incorrect password.";
                 return RedirectToPage();
             }
 
-            // Check email not already taken
             var check = _dbHelper.ExecuteQuery(
                 "SELECT StudentID FROM Students WHERE Email = @email AND StudentID != @sid LIMIT 1",
                 new[]
                 {
                     new MySqlParameter("@email", MySqlDbType.VarChar) { Value = NewEmail },
-                    new MySqlParameter("@sid", MySqlDbType.Int32) { Value = sid.Value }
+                    new MySqlParameter("@sid",   MySqlDbType.Int32)   { Value = sid.Value }
                 }, out _);
 
             if (check != null && check.Rows.Count > 0)
@@ -203,7 +204,7 @@ namespace CS_483_CSI_477.Pages
             _dbHelper.ExecuteNonQuery(updateSql, new[]
             {
                 new MySqlParameter("@email", MySqlDbType.VarChar) { Value = NewEmail },
-                new MySqlParameter("@sid", MySqlDbType.Int32) { Value = sid.Value }
+                new MySqlParameter("@sid",   MySqlDbType.Int32)   { Value = sid.Value }
             }, out var err);
 
             if (!string.IsNullOrEmpty(err))
@@ -212,7 +213,6 @@ namespace CS_483_CSI_477.Pages
                 return RedirectToPage();
             }
 
-            // Clear cached student context so it reloads
             HttpContext.Session.Remove("StudentContextText");
             TempData["ProfileSuccess"] = "Email updated successfully.";
             return RedirectToPage();
@@ -223,6 +223,7 @@ namespace CS_483_CSI_477.Pages
         {
             var sid = HttpContext.Session.GetInt32("StudentID");
             if (!sid.HasValue) return RedirectToPage("/Login");
+            if (HttpContext.Session.GetString("Role") == "Admin") return RedirectToPage("/AdminDashboard");
 
             CurrentPassword = (CurrentPassword ?? "").Trim();
             NewPassword = (NewPassword ?? "").Trim();
@@ -257,7 +258,7 @@ namespace CS_483_CSI_477.Pages
             _dbHelper.ExecuteNonQuery(updateSql, new[]
             {
                 new MySqlParameter("@hash", MySqlDbType.VarChar) { Value = newHash },
-                new MySqlParameter("@sid", MySqlDbType.Int32) { Value = sid.Value }
+                new MySqlParameter("@sid",  MySqlDbType.Int32)   { Value = sid.Value }
             }, out var err);
 
             if (!string.IsNullOrEmpty(err))
@@ -275,6 +276,7 @@ namespace CS_483_CSI_477.Pages
         {
             var sid = HttpContext.Session.GetInt32("StudentID");
             if (!sid.HasValue) return RedirectToPage("/Login");
+            if (HttpContext.Session.GetString("Role") == "Admin") return RedirectToPage("/AdminDashboard");
 
             if (PhotoFile == null || PhotoFile.Length == 0)
             {
@@ -316,13 +318,11 @@ namespace CS_483_CSI_477.Pages
                 await blobClient.UploadAsync(stream, overwrite: true);
 
                 var photoUrl = blobClient.Uri.ToString();
-
-                // Check if ProfilePhotoUrl column exists before updating
                 var updateSql = "UPDATE Students SET ProfilePhotoUrl = @url WHERE StudentID = @sid";
                 _dbHelper.ExecuteNonQuery(updateSql, new[]
                 {
                     new MySqlParameter("@url", MySqlDbType.VarChar) { Value = photoUrl },
-                    new MySqlParameter("@sid", MySqlDbType.Int32) { Value = sid.Value }
+                    new MySqlParameter("@sid", MySqlDbType.Int32)   { Value = sid.Value }
                 }, out var err);
 
                 if (!string.IsNullOrEmpty(err))
@@ -350,7 +350,7 @@ namespace CS_483_CSI_477.Pages
             var sql = "SELECT StudentID FROM Students WHERE StudentID = @sid AND PasswordHash = @hash LIMIT 1";
             var result = _dbHelper.ExecuteQuery(sql, new[]
             {
-                new MySqlParameter("@sid", MySqlDbType.Int32) { Value = studentId },
+                new MySqlParameter("@sid",  MySqlDbType.Int32)   { Value = studentId },
                 new MySqlParameter("@hash", MySqlDbType.VarChar) { Value = hash }
             }, out _);
 

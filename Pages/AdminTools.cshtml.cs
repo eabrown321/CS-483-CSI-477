@@ -7,6 +7,9 @@ namespace CS_483_CSI_477.Pages
     {
         public IActionResult OnGet()
         {
+            if (!HttpContext.Session.GetInt32("AdminID").HasValue)
+                return RedirectToPage("/Login");
+
             if (HttpContext.Session.GetString("Role") != "Admin")
                 return RedirectToPage("/Login");
 

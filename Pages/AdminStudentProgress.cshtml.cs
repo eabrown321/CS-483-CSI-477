@@ -6,7 +6,7 @@ using System.Data;
 
 namespace CS_483_CSI_477.Pages
 {
-    public class ProgressModel : PageModel
+    public class AdminStudentProgressModel : PageModel
     {
         private readonly DatabaseHelper _dbHelper;
         private readonly AccountHoldService _accountHoldService;
@@ -17,6 +17,7 @@ namespace CS_483_CSI_477.Pages
         public int TotalCreditsEarned { get; set; }
         public int TotalCreditsRequired { get; set; } = 120;
         public int CompletionPercentage { get; set; }
+        public int ViewedStudentId { get; set; }
 
         public bool HasAccountHolds { get; set; }
         public string AccountHoldMessage { get; set; } = string.Empty;
@@ -59,26 +60,28 @@ namespace CS_483_CSI_477.Pages
             "ECON 241"
         };
 
-        public ProgressModel(DatabaseHelper dbHelper, AccountHoldService accountHoldService)
+        public AdminStudentProgressModel(DatabaseHelper dbHelper, AccountHoldService accountHoldService)
         {
             _dbHelper = dbHelper;
             _accountHoldService = accountHoldService;
         }
 
-        public IActionResult OnGet()
+        public IActionResult OnGet(int studentId)
         {
-            if (!HttpContext.Session.GetInt32("StudentID").HasValue)
+            // Admin guard
+            if (!HttpContext.Session.GetInt32("AdminID").HasValue)
                 return RedirectToPage("/Login");
+            if (HttpContext.Session.GetString("Role") != "Admin")
+                return RedirectToPage("/StudentDashboard");
 
-            // Prevent admins from landing on student pages
-            if (HttpContext.Session.GetString("Role") == "Admin")
+            if (studentId <= 0)
                 return RedirectToPage("/AdminDashboard");
 
-            int studentId = HttpContext.Session.GetInt32("StudentID") ?? 0;
+            ViewedStudentId = studentId;
 
-            LoadStudentProgress();
-            LoadAllCourses();
-            LoadRequirementBreakdown();
+            LoadStudentProgress(studentId);
+            LoadAllCourses(studentId);
+            LoadRequirementBreakdown(studentId);
 
             HasAccountHolds = _accountHoldService.HasActiveHolds(studentId);
             if (HasAccountHolds)
@@ -87,10 +90,8 @@ namespace CS_483_CSI_477.Pages
             return Page();
         }
 
-        private void LoadStudentProgress()
+        private void LoadStudentProgress(int studentId)
         {
-            int studentId = HttpContext.Session.GetInt32("StudentID") ?? 0;
-
             string query = $@"
                 SELECT 
                     CONCAT(s.FirstName, ' ', s.LastName) as FullName,
@@ -120,10 +121,8 @@ namespace CS_483_CSI_477.Pages
             }
         }
 
-        private void LoadAllCourses()
+        private void LoadAllCourses(int studentId)
         {
-            int studentId = HttpContext.Session.GetInt32("StudentID") ?? 0;
-
             string query = $@"
                 SELECT 
                     c.CourseCode, c.CourseName, c.CreditHours,
@@ -139,10 +138,8 @@ namespace CS_483_CSI_477.Pages
             CompletedCourses = _dbHelper.ExecuteQuery(query, out _);
         }
 
-        private void LoadRequirementBreakdown()
+        private void LoadRequirementBreakdown(int studentId)
         {
-            int studentId = HttpContext.Session.GetInt32("StudentID") ?? 0;
-
             string degreeQuery = $@"
                 SELECT dp.DegreeID, dp.DegreeCode
                 FROM Students s
@@ -156,9 +153,7 @@ namespace CS_483_CSI_477.Pages
             string degreeCode = degreeResult.Rows[0]["DegreeCode"].ToString()!;
 
             string breakdownQuery = $@"
-                SELECT 
-                    dr.RequirementCategory,
-                    SUM(c.CreditHours) as EarnedCredits
+                SELECT dr.RequirementCategory, SUM(c.CreditHours) as EarnedCredits
                 FROM StudentCourseHistory sch
                 JOIN Courses c ON sch.CourseID = c.CourseID
                 JOIN DegreeRequirements dr ON c.CourseID = dr.CourseID
@@ -203,8 +198,7 @@ namespace CS_483_CSI_477.Pages
                 SELECT c.CourseCode, c.CreditHours
                 FROM StudentCourseHistory sch
                 JOIN Courses c ON sch.CourseID = c.CourseID
-                WHERE sch.StudentID = {studentId}
-                  AND sch.Status = 'Completed'";
+                WHERE sch.StudentID = {studentId} AND sch.Status = 'Completed'";
 
             var completedResult = _dbHelper.ExecuteQuery(allCompletedQuery, out _);
             if (completedResult != null)
