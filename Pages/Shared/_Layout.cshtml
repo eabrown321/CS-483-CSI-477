@@ -1,0 +1,197 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="AI Academic Advisor - University of Southern Indiana" />
+    <title>@ViewData["Title"] - AI Academic Advisor</title>
+
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- Fonts: DM Sans + DM Serif Display -->
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+
+    <!-- Skip to content (accessibility) -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- Global loading overlay for AI requests -->
+    <div id="ai-loading-overlay" style="display:none; position:fixed; inset:0; background:rgba(13,34,64,0.35); z-index:9998; backdrop-filter:blur(2px); align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:16px; padding:2rem 2.5rem; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.2); max-width:320px;">
+            <div style="width:48px; height:48px; border:3px solid #e2e8f0; border-top-color:#0d2240; border-radius:50%; animation:spin 0.7s linear infinite; margin:0 auto 1rem;"></div>
+            <p style="font-weight:600; color:#0d2240; margin:0; font-family:'DM Sans',sans-serif;">Advisor is thinking…</p>
+            <p style="font-size:0.8rem; color:#64748b; margin:0.25rem 0 0; font-family:'DM Sans',sans-serif;">This may take a few seconds</p>
+        </div>
+    </div>
+
+    <header role="banner">
+        <nav class="navbar navbar-expand-md navbar-light" role="navigation" aria-label="Main navigation">
+            <div class="container">
+                @if (Context.Session.GetString("Role") == "Admin")
+                {
+                    <a class="navbar-brand" asp-area="" asp-page="/AdminDashboard" aria-label="AI Academic Advisor Home">
+                        <span class="brand-icon" aria-hidden="true"><i class="bi bi-mortarboard-fill"></i></span>
+                        AI Advisor
+                    </a>
+                }
+                else
+                {
+                    <a class="navbar-brand" asp-area="" asp-page="/StudentDashboard" aria-label="AI Academic Advisor Home">
+                        <span class="brand-icon" aria-hidden="true"><i class="bi bi-mortarboard-fill"></i></span>
+                        AI Advisor
+                    </a>
+                }
+
+                <button class="navbar-toggler" type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#mainNav"
+                        aria-controls="mainNav"
+                        aria-expanded="false"
+                        aria-label="Toggle navigation menu">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="navbar-collapse collapse" id="mainNav">
+                    <ul class="navbar-nav flex-grow-1" role="list">
+                        @if (Context.Session.GetString("Role") == "Admin")
+                        {
+                            <li class="nav-item" role="listitem">
+                                <a class="nav-link @(ViewContext.RouteData.Values["page"]?.ToString() == "/AdminDashboard" ? "active" : "")"
+                                   asp-page="/AdminDashboard"
+                                   aria-current="@(ViewContext.RouteData.Values["page"]?.ToString() == "/AdminDashboard" ? "page" : null)">
+                                    <i class="bi bi-shield-check" aria-hidden="true"></i>Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item" role="listitem">
+                                <a class="nav-link @(ViewContext.RouteData.Values["page"]?.ToString() == "/AdminTools" ? "active" : "")"
+                                   asp-page="/AdminTools"
+                                   aria-current="@(ViewContext.RouteData.Values["page"]?.ToString() == "/AdminTools" ? "page" : null)">
+                                    <i class="bi bi-tools" aria-hidden="true"></i>Tools
+                                </a>
+                            </li>
+                            <li class="nav-item" role="listitem">
+                                <a class="nav-link @(ViewContext.RouteData.Values["page"]?.ToString() == "/AdminAnalytics" ? "active" : "")"
+                                   asp-page="/AdminAnalytics"
+                                   aria-current="@(ViewContext.RouteData.Values["page"]?.ToString() == "/AdminAnalytics" ? "page" : null)">
+                                    <i class="bi bi-graph-up" aria-hidden="true"></i>Analytics
+                                </a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item" role="listitem">
+                                <a class="nav-link @(ViewContext.RouteData.Values["page"]?.ToString() == "/StudentDashboard" ? "active" : "")"
+                                   asp-page="/StudentDashboard"
+                                   aria-current="@(ViewContext.RouteData.Values["page"]?.ToString() == "/StudentDashboard" ? "page" : null)">
+                                    <i class="bi bi-speedometer2" aria-hidden="true"></i>Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item" role="listitem">
+                                <a class="nav-link @(ViewContext.RouteData.Values["page"]?.ToString() == "/Chat" ? "active" : "")"
+                                   asp-page="/Chat"
+                                   aria-current="@(ViewContext.RouteData.Values["page"]?.ToString() == "/Chat" ? "page" : null)">
+                                    <i class="bi bi-chat-dots" aria-hidden="true"></i>Advisor Chat
+                                </a>
+                            </li>
+                            <li class="nav-item" role="listitem">
+                                <a class="nav-link @(ViewContext.RouteData.Values["page"]?.ToString() == "/Progress" ? "active" : "")"
+                                   asp-page="/Progress"
+                                   aria-current="@(ViewContext.RouteData.Values["page"]?.ToString() == "/Progress" ? "page" : null)">
+                                    <i class="bi bi-bar-chart-line" aria-hidden="true"></i>Progress
+                                </a>
+                            </li>
+                            <li class="nav-item" role="listitem">
+                                <a class="nav-link @(ViewContext.RouteData.Values["page"]?.ToString() == "/Planner" ? "active" : "")"
+                                   asp-page="/Planner"
+                                   aria-current="@(ViewContext.RouteData.Values["page"]?.ToString() == "/Planner" ? "page" : null)">
+                                    <i class="bi bi-calendar3" aria-hidden="true"></i>Planner
+                                </a>
+                            </li>
+                        }
+                    </ul>
+
+                    <ul class="navbar-nav align-items-center" role="list">
+                        @{
+                            var studentName = Context.Session.GetString("StudentName");
+                        }
+                        @if (!string.IsNullOrEmpty(studentName))
+                        {
+                            <li class="nav-item me-2" role="listitem">
+                                <a class="nav-link @(ViewContext.RouteData.Values["page"]?.ToString() == "/Profile" ? "active" : "")"
+                                   asp-page="/Profile"
+                                   style="padding-right:0;"
+                                   aria-label="My Profile">
+                                    <i class="bi bi-person-circle" aria-hidden="true"></i>
+                                    <span class="d-none d-lg-inline">@studentName.Split(' ')[0]</span>
+                                </a>
+                            </li>
+                        }
+                        <li class="nav-item" role="listitem">
+                            <a class="nav-link" asp-page="/Logout" aria-label="Sign out">
+                                <i class="bi bi-box-arrow-right" aria-hidden="true"></i>Sign Out
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main id="main-content" role="main" tabindex="-1">
+        <div class="container py-4">
+            @RenderBody()
+        </div>
+    </main>
+
+    <footer role="contentinfo">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-center text-md-start mb-2 mb-md-0">
+                    <strong><i class="bi bi-mortarboard-fill me-2"></i>AI Academic Advisor</strong>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <span>© @DateTime.Now.Year · AI-powered academic planning</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        // Global AI loading overlay
+        window.showAiLoading = function () {
+            var el = document.getElementById('ai-loading-overlay');
+            el.style.display = 'flex';
+        };
+        window.hideAiLoading = function () {
+            document.getElementById('ai-loading-overlay').style.display = 'none';
+        };
+
+        // Auto-attach to any form with data-ai-form attribute
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('[data-ai-form]').forEach(function (form) {
+                form.addEventListener('submit', function () {
+                    window.showAiLoading();
+                });
+            });
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

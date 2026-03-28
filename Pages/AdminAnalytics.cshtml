@@ -1,0 +1,521 @@
+﻿@page
+@model AdminAnalyticsModel
+@{
+    ViewData["Title"] = "Analytics";
+}
+
+@section Styles {
+    <style>
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+            .page-header h1 {
+                font-family: 'DM Serif Display', serif;
+                color: white;
+                font-size: 2rem;
+                margin-bottom: 0.25rem;
+            }
+
+            .page-header p {
+                color: rgba(255,255,255,0.7);
+                font-size: 0.9rem;
+                margin: 0;
+            }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid var(--slate-200);
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .stat-card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+            .stat-card-icon.navy {
+                background: rgba(13,34,64,0.08);
+                color: var(--navy);
+            }
+
+            .stat-card-icon.gold {
+                background: rgba(200,146,42,0.12);
+                color: var(--gold);
+            }
+
+            .stat-card-icon.green {
+                background: #dcfce7;
+                color: #15803d;
+            }
+
+            .stat-card-icon.blue {
+                background: #dbeafe;
+                color: #1d4ed8;
+            }
+
+            .stat-card-icon.red {
+                background: #fee2e2;
+                color: #b91c1c;
+            }
+
+            .stat-card-icon.purple {
+                background: #f3e8ff;
+                color: #7c3aed;
+            }
+
+            .stat-card-icon.slate {
+                background: #f1f5f9;
+                color: #475569;
+            }
+
+        .stat-card-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--navy);
+            line-height: 1;
+        }
+
+        .stat-card-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--slate-400);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .stat-card-sub {
+            font-size: 0.78rem;
+            color: var(--slate-400);
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid var(--slate-200);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .section-card-header {
+            padding: 1.1rem 1.5rem;
+            border-bottom: 1px solid var(--slate-100);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-card-title {
+            font-weight: 700;
+            color: var(--navy);
+            font-size: 0.95rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .analytics-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+            .analytics-table th {
+                text-align: left;
+                padding: 0.6rem 1.5rem;
+                font-size: 0.7rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.07em;
+                color: var(--slate-400);
+                background: #f8fafc;
+                border-bottom: 1px solid var(--slate-100);
+            }
+
+            .analytics-table td {
+                padding: 0.75rem 1.5rem;
+                border-bottom: 1px solid #f1f5f9;
+                color: var(--navy);
+                vertical-align: middle;
+            }
+
+            .analytics-table tr:last-child td {
+                border-bottom: none;
+            }
+
+            .analytics-table tr:hover td {
+                background: #f8fafc;
+            }
+
+        .progress-bar-wrap {
+            background: #f1f5f9;
+            border-radius: 100px;
+            height: 6px;
+            overflow: hidden;
+            min-width: 80px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 100px;
+            background: linear-gradient(90deg, var(--navy), #1a3a5c);
+        }
+
+        .badge-type {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+            .badge-type.bulletin {
+                background: rgba(13,34,64,0.08);
+                color: var(--navy);
+            }
+
+            .badge-type.document {
+                background: #f1f5f9;
+                color: #475569;
+            }
+
+        .badge-rate {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+            .badge-rate.high {
+                background: #dcfce7;
+                color: #15803d;
+            }
+
+            .badge-rate.low {
+                background: #fef9c3;
+                color: #854d0e;
+            }
+
+        .empty-state {
+            text-align: center;
+            padding: 2.5rem;
+            color: var(--slate-400);
+        }
+
+            .empty-state i {
+                font-size: 2rem;
+                margin-bottom: 0.5rem;
+                display: block;
+            }
+    </style>
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-graph-up me-2" style="color:var(--gold);"></i>Analytics</h1>
+    <p>Platform usage and student performance overview</p>
+</div>
+
+<!-- Stat Cards -->
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-card-icon navy"><i class="bi bi-people-fill"></i></div>
+        <div class="stat-card-value">@Model.TotalStudents</div>
+        <div class="stat-card-label">Total Students</div>
+        <div class="stat-card-sub">@Model.ActiveStudents active</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon green"><i class="bi bi-book-fill"></i></div>
+        <div class="stat-card-value">@Model.TotalCourses</div>
+        <div class="stat-card-label">Courses</div>
+        <div class="stat-card-sub">Active in catalog</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon gold"><i class="bi bi-star-fill"></i></div>
+        <div class="stat-card-value">@Model.AverageGpa.ToString("F2")</div>
+        <div class="stat-card-label">Avg GPA</div>
+        <div class="stat-card-sub">All students</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon blue"><i class="bi bi-bar-chart-fill"></i></div>
+        <div class="stat-card-value">@((Model.ActiveStudents * 100.0 / Math.Max(Model.TotalStudents, 1)).ToString("F0"))%</div>
+        <div class="stat-card-label">Enrollment Rate</div>
+        <div class="stat-card-sub">Active / Total</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon red"><i class="bi bi-chat-dots-fill"></i></div>
+        <div class="stat-card-value">@Model.TotalChatMessages</div>
+        <div class="stat-card-label">Chat Messages</div>
+        <div class="stat-card-sub">@Model.ActiveChatUsers active users</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon purple"><i class="bi bi-file-earmark-pdf-fill"></i></div>
+        <div class="stat-card-value">@Model.TotalBulletins</div>
+        <div class="stat-card-label">Bulletins</div>
+        <div class="stat-card-sub">Uploaded PDFs</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon slate"><i class="bi bi-folder-fill"></i></div>
+        <div class="stat-card-value">@Model.TotalSupportingDocs</div>
+        <div class="stat-card-label">Documents</div>
+        <div class="stat-card-sub">Supporting files</div>
+    </div>
+</div>
+
+<!-- Enrollment by Major + Popular Courses -->
+<div class="row g-4 mb-2">
+    <div class="col-lg-6">
+        <div class="section-card">
+            <div class="section-card-header">
+                <h2 class="section-card-title"><i class="bi bi-mortarboard-fill" style="color:var(--gold);"></i> Enrollment by Major</h2>
+            </div>
+            @if (Model.EnrollmentByMajor != null && Model.EnrollmentByMajor.Rows.Count > 0)
+            {
+                <table class="analytics-table">
+                    <thead>
+                        <tr>
+                            <th>Major</th>
+                            <th>Students</th>
+                            <th>Distribution</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (System.Data.DataRow row in Model.EnrollmentByMajor.Rows)
+                        {
+                            var pct = Convert.ToDecimal(row["Percentage"]);
+                            <tr>
+                                <td>@row["Major"]</td>
+                                <td><strong>@row["StudentCount"]</strong> <span style="color:var(--slate-400); font-size:0.8rem;">(@pct.ToString("F1")%)</span></td>
+                                <td>
+                                    <div class="progress-bar-wrap">
+                                        <div class="progress-bar-fill" style="width:@pct%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="empty-state"><i class="bi bi-inbox"></i>No enrollment data</div>
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="section-card">
+            <div class="section-card-header">
+                <h2 class="section-card-title"><i class="bi bi-trophy-fill" style="color:var(--gold);"></i> Most Popular Courses</h2>
+            </div>
+            @if (Model.PopularCourses != null && Model.PopularCourses.Rows.Count > 0)
+            {
+                <table class="analytics-table">
+                    <thead>
+                        <tr>
+                            <th>Course</th>
+                            <th>Enrollments</th>
+                            <th>Avg Grade</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (System.Data.DataRow row in Model.PopularCourses.Rows)
+                        {
+                            var avgGrade = row["AverageGrade"] != DBNull.Value
+                            ? Convert.ToDecimal(row["AverageGrade"]).ToString("F2")
+                            : "N/A";
+                            <tr>
+                                <td>
+                                    <strong>@row["CourseCode"]</strong>
+                                    <div style="font-size:0.78rem; color:var(--slate-400);">@row["CourseName"]</div>
+                                </td>
+                                <td>@row["EnrollmentCount"]</td>
+                                <td>@avgGrade</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="empty-state"><i class="bi bi-inbox"></i>No course data</div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- GPA by Major + Completion Rates -->
+<div class="row g-4 mb-2">
+    <div class="col-lg-6">
+        <div class="section-card">
+            <div class="section-card-header">
+                <h2 class="section-card-title"><i class="bi bi-graph-up" style="color:var(--gold);"></i> GPA by Major</h2>
+            </div>
+            @if (Model.GpaByMajor != null && Model.GpaByMajor.Rows.Count > 0)
+            {
+                <table class="analytics-table">
+                    <thead>
+                        <tr>
+                            <th>Major</th>
+                            <th>Students</th>
+                            <th>Avg GPA</th>
+                            <th>Range</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (System.Data.DataRow row in Model.GpaByMajor.Rows)
+                        {
+                            <tr>
+                                <td>@row["Major"]</td>
+                                <td>@row["StudentCount"]</td>
+                                <td><strong>@row["AverageGPA"]</strong></td>
+                                <td style="color:var(--slate-400); font-size:0.8rem;">@row["MinGPA"] – @row["MaxGPA"]</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="empty-state"><i class="bi bi-inbox"></i>No GPA data</div>
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="section-card">
+            <div class="section-card-header">
+                <h2 class="section-card-title"><i class="bi bi-patch-check-fill" style="color:var(--gold);"></i> Degree Completion Rates</h2>
+            </div>
+            @if (Model.CompletionRates != null && Model.CompletionRates.Rows.Count > 0)
+            {
+                <table class="analytics-table">
+                    <thead>
+                        <tr>
+                            <th>Major</th>
+                            <th>Completed</th>
+                            <th>Rate</th>
+                            <th>Avg Credits</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (System.Data.DataRow row in Model.CompletionRates.Rows)
+                        {
+                            var rate = Convert.ToDecimal(row["CompletionRate"]);
+                            <tr>
+                                <td>@row["Major"]</td>
+                                <td style="color:var(--slate-500);">@row["CompletedStudents"] / @row["TotalStudents"]</td>
+                                <td>
+                                    <span class="badge-rate @(rate >= 50 ? "high" : "low")">
+                                        @rate.ToString("F1")%
+                                    </span>
+                                </td>
+                                <td>@row["AvgCreditsEarned"]</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="empty-state"><i class="bi bi-inbox"></i>No completion data</div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Chat Usage -->
+<div class="section-card">
+    <div class="section-card-header">
+        <h2 class="section-card-title"><i class="bi bi-chat-dots-fill" style="color:var(--gold);"></i> AI Chat Usage — Last 30 Days</h2>
+    </div>
+    @if (Model.ChatUsageByDay != null && Model.ChatUsageByDay.Rows.Count > 0)
+    {
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Messages</th>
+                    <th>Active Users</th>
+                    <th>Avg / User</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (System.Data.DataRow row in Model.ChatUsageByDay.Rows)
+                {
+                    var messages = Convert.ToInt32(row["DailyMessages"]);
+                    var users = Convert.ToInt32(row["DailyUsers"]);
+                    var avg = users > 0 ? (decimal)messages / users : 0;
+                    <tr>
+                        <td>@Convert.ToDateTime(row["SessionDate"]).ToString("MMM dd, yyyy")</td>
+                        <td><strong>@messages</strong></td>
+                        <td>@users</td>
+                        <td>@avg.ToString("F1")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="empty-state"><i class="bi bi-inbox"></i>No chat usage data available</div>
+    }
+</div>
+
+<!-- Recent Uploads -->
+<div class="section-card">
+    <div class="section-card-header">
+        <h2 class="section-card-title"><i class="bi bi-cloud-upload-fill" style="color:var(--gold);"></i> Recent File Uploads</h2>
+    </div>
+    @if (Model.RecentUploads != null && Model.RecentUploads.Rows.Count > 0)
+    {
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>File Name</th>
+                    <th>Upload Date</th>
+                    <th>Size</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (System.Data.DataRow row in Model.RecentUploads.Rows)
+                {
+                    var fileSize = Convert.ToInt64(row["FileSize"]);
+                    var sizeStr = fileSize >= 1024 * 1024
+                    ? $"{(fileSize / 1024.0 / 1024.0):F2} MB"
+                    : $"{(fileSize / 1024.0):F1} KB";
+                    var type = row["Type"].ToString() ?? "";
+                    <tr>
+                        <td><span class="badge-type @type.ToLower()">@type</span></td>
+                        <td style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@row["FileName"]</td>
+                        <td>@Convert.ToDateTime(row["UploadDate"]).ToString("MMM dd, yyyy")</td>
+                        <td style="color:var(--slate-400);">@sizeStr</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="empty-state"><i class="bi bi-inbox"></i>No recent uploads</div>
+    }
+</div>

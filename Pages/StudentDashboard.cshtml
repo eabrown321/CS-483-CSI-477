@@ -1,0 +1,199 @@
+﻿@page
+@model StudentDashboardModel
+@{
+    ViewData["Title"] = "Dashboard";
+    var progressPct = Math.Min((int)(Model.TotalCreditsEarned * 100 / 120), 100);
+}
+
+<div class="fade-in-up">
+
+    @if (Model.HasAccountHolds)
+    {
+        <div class="alert alert-danger d-flex align-items-start gap-3 mb-4 p-3"
+             style="border-radius:12px; border-left:5px solid #dc2626; background:#fef2f2;"
+             role="alert" aria-live="polite">
+            <i class="bi bi-exclamation-triangle-fill fs-4 text-danger mt-1" aria-hidden="true"></i>
+            <div>
+                <strong style="color:#dc2626;">Account Hold Detected</strong>
+                <div style="white-space:pre-line; font-size:0.875rem; color:#7f1d1d; margin-top:0.25rem;">@Model.AccountHoldMessage</div>
+            </div>
+        </div>
+    }
+
+    <!-- Welcome Banner -->
+    <div class="welcome-banner mb-4">
+        <div class="gold-tag">
+            <i class="bi bi-mortarboard-fill" aria-hidden="true"></i>
+            @Model.EnrollmentStatus
+        </div>
+        <h1 class="mb-1">Welcome back, @Model.StudentName.Split(' ')[0].</h1>
+        <p class="mb-0">@Model.Major</p>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3 fade-in-up fade-in-up-delay-1">
+            <div class="card stat-card accent-navy h-100">
+                <div class="card-body">
+                    <div class="stat-icon" style="background:#e8f0fb; color:#1e4678;">
+                        <i class="bi bi-star-fill" aria-hidden="true"></i>
+                    </div>
+                    <div class="stat-label">Current GPA</div>
+                    <div class="stat-value">@Model.CurrentGPA.ToString("F2")</div>
+                    <div class="stat-sub">Out of 4.00</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 fade-in-up fade-in-up-delay-2">
+            <div class="card stat-card accent-green h-100">
+                <div class="card-body">
+                    <div class="stat-icon" style="background:#dcfce7; color:#15803d;">
+                        <i class="bi bi-bookmark-check-fill" aria-hidden="true"></i>
+                    </div>
+                    <div class="stat-label">Credits Earned</div>
+                    <div class="stat-value">@Model.TotalCreditsEarned</div>
+                    <div class="stat-sub">of 120 required</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 fade-in-up fade-in-up-delay-3">
+            <div class="card stat-card accent-gold h-100">
+                <div class="card-body">
+                    <div class="stat-icon" style="background:#fdf3e0; color:#c8922a;">
+                        <i class="bi bi-journal-check" aria-hidden="true"></i>
+                    </div>
+                    <div class="stat-label">Completed</div>
+                    <div class="stat-value">@Model.CoursesCompleted</div>
+                    <div class="stat-sub">Courses passed</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 fade-in-up fade-in-up-delay-4">
+            <div class="card stat-card accent-blue h-100">
+                <div class="card-body">
+                    <div class="stat-icon" style="background:#dbeafe; color:#1d4ed8;">
+                        <i class="bi bi-trophy-fill" aria-hidden="true"></i>
+                    </div>
+                    <div class="stat-label">Degree Progress</div>
+                    <div class="stat-value">@progressPct<span style="font-size:1rem; font-weight:500;">%</span></div>
+                    <div class="stat-sub">
+                        <div class="progress mt-1" style="height:4px;" role="progressbar"
+                             aria-valuenow="@progressPct" aria-valuemin="0" aria-valuemax="100"
+                             aria-label="Degree completion @progressPct percent">
+                            <div class="progress-bar" style="width:@progressPct%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4 fade-in-up fade-in-up-delay-1">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="bi bi-chat-dots-fill me-2" aria-hidden="true"></i>AI Advisor Chat
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <p class="text-muted flex-grow-1" style="font-size:0.9rem;">
+                        Ask about courses, degree requirements, and graduation planning. Your AI advisor is ready.
+                    </p>
+                    <button class="btn btn-primary w-100"
+                            data-bs-toggle="modal"
+                            data-bs-target="#disclaimerModal"
+                            aria-haspopup="dialog">
+                        <i class="bi bi-robot me-2" aria-hidden="true"></i>Start Conversation
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 fade-in-up fade-in-up-delay-2">
+            <div class="card h-100">
+                <div class="card-header gold">
+                    <i class="bi bi-bar-chart-line-fill me-2" aria-hidden="true"></i>Degree Progress
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <p class="text-muted flex-grow-1" style="font-size:0.9rem;">
+                        Track completed courses, Core 39 requirements, and what remains for graduation.
+                    </p>
+                    <a href="/Progress" class="btn btn-outline-primary w-100">
+                        <i class="bi bi-arrow-right-circle me-2" aria-hidden="true"></i>View Progress
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 fade-in-up fade-in-up-delay-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="bi bi-calendar3 me-2" aria-hidden="true"></i>Course Planner
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <p class="text-muted flex-grow-1" style="font-size:0.9rem;">
+                        Build your semester-by-semester plan and map out the path to graduation.
+                    </p>
+                    <a href="/Planner" class="btn btn-outline-primary w-100">
+                        <i class="bi bi-calendar-event me-2" aria-hidden="true"></i>Open Planner
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tips -->
+    <div class="card fade-in-up">
+        <div class="card-body" style="padding: 1.25rem 1.5rem;">
+            <div class="section-header" style="margin-bottom:0.75rem; padding-bottom:0.75rem;">
+                <h6>
+                    <span class="section-icon"><i class="bi bi-lightbulb-fill" aria-hidden="true"></i></span>
+                    Planning Tips
+                </h6>
+            </div>
+            <ul class="mb-0" style="font-size:0.875rem; color:var(--slate-700); padding-left:1.25rem; display:flex; flex-direction:column; gap:0.4rem;">
+                <li>Check your progress regularly to stay on track for graduation</li>
+                <li>Use the planner to map out your remaining semesters</li>
+                <li>Chat with the AI advisor anytime you have questions about courses or requirements</li>
+                <li>Maintain at least a 2.0 GPA to remain eligible for graduation</li>
+            </ul>
+        </div>
+    </div>
+
+</div>
+
+<!-- Disclaimer Modal -->
+<div class="modal fade" id="disclaimerModal" tabindex="-1"
+     aria-labelledby="disclaimerModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0" style="border-radius:16px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+            <div class="modal-header border-0" style="background:var(--navy); color:white; padding:1.25rem 1.5rem;">
+                <h5 class="modal-title mb-0" id="disclaimerModalLabel" style="color:white; font-size:1rem;">
+                    <i class="bi bi-shield-check me-2" aria-hidden="true"></i>Before You Begin
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close dialog"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-warning mb-3">
+                    <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+                    <strong>Session Notice</strong>
+                </div>
+                <p style="font-size:0.9rem; color:var(--slate-700);">
+                    This conversation will be logged and may be reviewed by your academic advisor.
+                </p>
+                <p class="mb-0" style="font-size:0.9rem; color:var(--slate-700);">
+                    By proceeding, you acknowledge and agree to this policy.
+                </p>
+            </div>
+            <div class="modal-footer border-0" style="background:var(--slate-100); padding:1rem 1.5rem;">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <a href="/Chat" class="btn btn-primary">
+                    <i class="bi bi-check-circle me-2" aria-hidden="true"></i>I Understand, Continue
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

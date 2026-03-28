@@ -1,0 +1,277 @@
+﻿@page
+@model AdminStudentProgressModel
+@{
+    ViewData["Title"] = "Student Progress — Admin View";
+    var progressPct = Math.Min(Model.CompletionPercentage, 100);
+    var creditsRemaining = Model.TotalCreditsRequired - Model.TotalCreditsEarned;
+}
+
+<div class="fade-in-up">
+
+    <!-- Admin Back Banner -->
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <a href="/AdminDashboard" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to Dashboard
+        </a>
+        <a href="/AdminStudentPlanner?studentId=@Model.ViewedStudentId"
+           class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-calendar3 me-1" aria-hidden="true"></i>View Planner
+        </a>
+        <span class="ms-2" style="font-size:0.8rem; color:var(--slate-500);">
+            Admin view — read only
+        </span>
+    </div>
+
+    <!-- Account Hold Banner -->
+    @if (Model.HasAccountHolds)
+    {
+        <div class="alert alert-danger d-flex align-items-start gap-3 mb-4 p-3"
+             style="border-radius:12px; border-left:5px solid #dc2626; background:#fef2f2;"
+             role="alert" aria-live="polite">
+            <i class="bi bi-exclamation-triangle-fill fs-4 text-danger mt-1" aria-hidden="true"></i>
+            <div>
+                <strong style="color:#dc2626;">Account Hold Detected</strong>
+                <div style="white-space:pre-line; font-size:0.875rem; color:#7f1d1d; margin-top:0.25rem;">@Model.AccountHoldMessage</div>
+            </div>
+        </div>
+    }
+
+    <!-- Header -->
+    <div class="welcome-banner mb-4">
+        <div class="gold-tag">
+            <i class="bi bi-bar-chart-line-fill" aria-hidden="true"></i>
+            Academic Progress
+        </div>
+        <h1 class="mb-1">@Model.StudentName</h1>
+        <p class="mb-0">@Model.Major</p>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3 fade-in-up fade-in-up-delay-1">
+            <div class="card stat-card accent-navy h-100">
+                <div class="card-body">
+                    <div class="stat-icon" style="background:#e8f0fb; color:#1e4678;">
+                        <i class="bi bi-bookmark-check-fill" aria-hidden="true"></i>
+                    </div>
+                    <div class="stat-label">Credits Earned</div>
+                    <div class="stat-value">@Model.TotalCreditsEarned</div>
+                    <div class="stat-sub">of @Model.TotalCreditsRequired required</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 fade-in-up fade-in-up-delay-2">
+            <div class="card stat-card accent-green h-100">
+                <div class="card-body">
+                    <div class="stat-icon" style="background:#dcfce7; color:#15803d;">
+                        <i class="bi bi-journal-check" aria-hidden="true"></i>
+                    </div>
+                    <div class="stat-label">Completed</div>
+                    <div class="stat-value">@(Model.CompletedCourses?.Rows.Cast<System.Data.DataRow>().Count(r => r["Status"].ToString() == "Completed") ?? 0)</div>
+                    <div class="stat-sub">Courses passed</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 fade-in-up fade-in-up-delay-3">
+            <div class="card stat-card accent-gold h-100">
+                <div class="card-body">
+                    <div class="stat-icon" style="background:#fdf3e0; color:#c8922a;">
+                        <i class="bi bi-star-fill" aria-hidden="true"></i>
+                    </div>
+                    <div class="stat-label">Current GPA</div>
+                    <div class="stat-value">@Model.CurrentGPA.ToString("F2")</div>
+                    <div class="stat-sub">Out of 4.00</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 fade-in-up fade-in-up-delay-4">
+            <div class="card stat-card accent-blue h-100">
+                <div class="card-body">
+                    <div class="stat-icon" style="background:#dbeafe; color:#1d4ed8;">
+                        <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+                    </div>
+                    <div class="stat-label">Remaining</div>
+                    <div class="stat-value">@creditsRemaining</div>
+                    <div class="stat-sub">Credits to go</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overall Progress Bar -->
+    <div class="card mb-4 fade-in-up">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0" style="color:var(--navy); font-weight:700;">
+                    <i class="bi bi-trophy-fill me-2" style="color:var(--gold);" aria-hidden="true"></i>
+                    Overall Degree Completion
+                </h6>
+                <span style="font-size:1.5rem; font-weight:800; color:var(--navy);">@progressPct%</span>
+            </div>
+            <div class="progress" style="height:12px;" role="progressbar"
+                 aria-valuenow="@progressPct" aria-valuemin="0" aria-valuemax="100"
+                 aria-label="Degree completion @progressPct percent">
+                <div class="progress-bar @(progressPct >= 75 ? "green" : progressPct >= 50 ? "" : "gold")"
+                     style="width:@progressPct%"></div>
+            </div>
+            <div class="d-flex justify-content-between mt-1">
+                <small style="color:var(--slate-500);">0 credits</small>
+                <small style="color:var(--slate-500);">@Model.TotalCreditsRequired credits</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- Requirements Progress -->
+        <div class="col-lg-6 fade-in-up">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="bi bi-list-check me-2" aria-hidden="true"></i>Requirements Progress
+                </div>
+                <div class="card-body d-flex flex-column gap-3">
+                    @{
+                        void RenderReq(string label, int earned, int required, string barClass = "")
+                        {
+                            var pct = required > 0 ? Math.Min(earned * 100 / required, 100) : 0;
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span style="font-size:0.85rem; font-weight:600; color:var(--navy);">@label</span>
+                                    <span style="font-size:0.8rem; color:var(--slate-500);"><strong>@earned</strong> / @required cr</span>
+                                </div>
+                                <div class="progress" role="progressbar"
+                                     aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100"
+                                     aria-label="@label @pct percent complete">
+                                    <div class="progress-bar @barClass" style="width:@pct%"></div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    @{
+                        RenderReq(Model.CoreRequirement1Label, Model.CoreRequirement1Credits, Model.CoreRequirement1Required);
+                    }
+                    @{
+                        RenderReq(Model.CoreRequirement2Label, Model.CoreRequirement2Credits, Model.CoreRequirement2Required, "green");
+                    }
+                    @{
+                        RenderReq("Directed Electives", Model.ElectiveCredits, 12, "gold");
+                    }
+                    @{
+                        RenderReq("Core 39 General Education", Model.Core39Credits, 39);
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Degree Summary -->
+        <div class="col-lg-6 fade-in-up fade-in-up-delay-1">
+            <div class="card h-100">
+                <div class="card-header gold">
+                    <i class="bi bi-mortarboard-fill me-2" aria-hidden="true"></i>Degree Summary
+                </div>
+                <div class="card-body p-0">
+                    <table class="table mb-0" aria-label="Degree summary details">
+                        <tbody>
+                            <tr>
+                                <td style="padding:0.875rem 1.25rem; font-weight:600; color:var(--slate-700); width:55%; border-bottom:1px solid var(--slate-100);">
+                                    <i class="bi bi-award me-2 text-navy" aria-hidden="true"></i>Major
+                                </td>
+                                <td style="padding:0.875rem 1.25rem; color:var(--navy); font-weight:600; border-bottom:1px solid var(--slate-100);">@Model.Major</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:0.875rem 1.25rem; font-weight:600; color:var(--slate-700); border-bottom:1px solid var(--slate-100);">
+                                    <i class="bi bi-flag me-2" aria-hidden="true"></i>Credits Required
+                                </td>
+                                <td style="padding:0.875rem 1.25rem; border-bottom:1px solid var(--slate-100);"><strong>@Model.TotalCreditsRequired</strong></td>
+                            </tr>
+                            <tr>
+                                <td style="padding:0.875rem 1.25rem; font-weight:600; color:var(--slate-700); border-bottom:1px solid var(--slate-100);">
+                                    <i class="bi bi-check-circle me-2" style="color:var(--success);" aria-hidden="true"></i>Credits Earned
+                                </td>
+                                <td style="padding:0.875rem 1.25rem; border-bottom:1px solid var(--slate-100);"><strong style="color:var(--success);">@Model.TotalCreditsEarned</strong></td>
+                            </tr>
+                            <tr>
+                                <td style="padding:0.875rem 1.25rem; font-weight:600; color:var(--slate-700); border-bottom:1px solid var(--slate-100);">
+                                    <i class="bi bi-hourglass-split me-2" style="color:var(--gold);" aria-hidden="true"></i>Credits Remaining
+                                </td>
+                                <td style="padding:0.875rem 1.25rem; border-bottom:1px solid var(--slate-100);"><strong style="color:var(--gold);">@creditsRemaining</strong></td>
+                            </tr>
+                            <tr>
+                                <td style="padding:0.875rem 1.25rem; font-weight:600; color:var(--slate-700);">
+                                    <i class="bi bi-trophy-fill me-2" style="color:var(--navy);" aria-hidden="true"></i>Completion
+                                </td>
+                                <td style="padding:0.875rem 1.25rem;">
+                                    <span class="badge @(progressPct >= 75 ? "bg-success" : progressPct >= 50 ? "bg-primary" : "bg-secondary")">@progressPct%</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Course History -->
+    <div class="card fade-in-up">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <span><i class="bi bi-journal-check me-2" aria-hidden="true"></i>Course History</span>
+            @if (Model.CompletedCourses != null && Model.CompletedCourses.Rows.Count > 0)
+            {
+                <span class="badge" style="background:rgba(255,255,255,0.2); font-size:0.7rem;">
+                    @Model.CompletedCourses.Rows.Count courses
+                </span>
+            }
+        </div>
+        <div class="table-responsive">
+            <table class="table mb-0" aria-label="Completed courses">
+                <thead>
+                    <tr>
+                        <th>Course</th>
+                        <th>Name</th>
+                        <th>Cr</th>
+                        <th>Grade</th>
+                        <th>Semester</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.CompletedCourses != null && Model.CompletedCourses.Rows.Count > 0)
+                    {
+                        @foreach (System.Data.DataRow row in Model.CompletedCourses.Rows)
+                        {
+                            var grade = row["Grade"].ToString() ?? "";
+                            var isInProgress = row.Table.Columns.Contains("Status") && row["Status"]?.ToString() == "In Progress";
+                            var (badgeBg, badgeColor) = grade switch
+                            {
+                                "A" or "A-" => ("#dcfce7", "#15803d"),
+                                "B+" or "B" or "B-" => ("#dbeafe", "#1d4ed8"),
+                                "C+" or "C" => ("#fef9c3", "#854d0e"),
+                                "IP" => ("#fdf3e0", "#c8922a"),
+                                _ => ("#f1f5f9", "#475569")
+                            };
+                            <tr>
+                                <td><span style="font-weight:700; color:var(--navy); font-size:0.85rem; letter-spacing:0.02em;">@row["CourseCode"]</span></td>
+                                <td style="font-size:0.875rem; color:var(--slate-700);">@row["CourseName"]</td>
+                                <td><span style="font-size:0.8rem; color:var(--slate-500);">@row["CreditHours"]</span></td>
+                                <td>
+                                    <span class="badge-grade" style="background:@badgeBg; color:@badgeColor;">
+                                        @(isInProgress ? "In Progress" : grade)
+                                    </span>
+                                </td>
+                                <td style="font-size:0.8rem; color:var(--slate-500);">@row["Term"] @row["AcademicYear"]</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center py-5" style="color:var(--slate-500);">
+                                <i class="bi bi-inbox" style="font-size:2rem; display:block; margin-bottom:0.5rem;" aria-hidden="true"></i>
+                                No courses on record yet.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>

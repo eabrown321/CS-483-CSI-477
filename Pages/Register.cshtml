@@ -1,0 +1,363 @@
+﻿@page
+@model CS_483_CSI_477.Pages.RegisterModel
+@{
+    ViewData["Title"] = "Create Account";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Account · AI Academic Advisor</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" />
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--navy);
+        }
+
+        .hero {
+            position: relative;
+            width: 100%;
+            padding: 2.5rem 1.5rem 6rem;
+            text-align: center;
+            overflow: hidden;
+            background: var(--navy);
+        }
+
+            .hero::before {
+                content: '';
+                position: absolute;
+                top: -180px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 700px;
+                height: 700px;
+                border-radius: 50%;
+                border: 1.5px solid rgba(200,146,42,0.12);
+                pointer-events: none;
+            }
+
+        .hero-glow {
+            position: absolute;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 300px;
+            background: radial-gradient(ellipse, rgba(200,146,42,0.22) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-icon-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 72px;
+            height: 72px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, var(--gold) 0%, #e0a830 100%);
+            box-shadow: 0 8px 32px rgba(200,146,42,0.45), 0 2px 8px rgba(0,0,0,0.3);
+            margin: 0 auto 1.25rem;
+            font-size: 2rem;
+            color: white;
+        }
+
+        .hero-title {
+            font-family: 'DM Serif Display', serif;
+            color: var(--gold);
+            font-size: clamp(1.75rem, 4vw, 2.75rem);
+            line-height: 1.1;
+            margin-bottom: 0.5rem;
+        }
+
+        .hero-sub {
+            color: rgba(200,146,42,0.8);
+            font-size: 0.95rem;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .form-wrap {
+            position: relative;
+            z-index: 10;
+            margin: -5rem auto 0;
+            max-width: 500px;
+            padding: 0 1.25rem 3rem;
+        }
+
+        .form-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.35), 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        .form-card-title {
+            font-family: 'DM Serif Display', serif;
+            color: var(--navy);
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .form-card-sub {
+            color: var(--slate-500);
+            font-size: 0.85rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .field-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--slate-600);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 0.4rem;
+        }
+
+        .field-input {
+            width: 100%;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 0.8rem 1rem;
+            font-size: 0.9rem;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--navy);
+            background: #f8fafc;
+            transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+            outline: none;
+        }
+
+            .field-input:focus {
+                border-color: var(--navy);
+                background: white;
+                box-shadow: 0 0 0 3px rgba(13,34,64,0.09);
+            }
+
+            .field-input::placeholder {
+                color: #adb5c2;
+            }
+
+        .field-row {
+            margin-bottom: 1.1rem;
+        }
+
+        .field-row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.1rem;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: var(--gold);
+            color: black;
+            border: none;
+            border-radius: 10px;
+            padding: 0.9rem;
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            box-shadow: 0 4px 16px rgba(13,34,64,0.25);
+        }
+
+            .submit-btn:hover {
+                background: #b07d20;
+                box-shadow: 0 6px 24px rgba(13,34,64,0.35);
+                transform: translateY(-1px);
+            }
+
+        .divider {
+            text-align: center;
+            margin: 1.5rem 0;
+            position: relative;
+        }
+
+            .divider::before {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 0;
+                right: 0;
+                height: 1px;
+                background: #e2e8f0;
+            }
+
+            .divider span {
+                position: relative;
+                background: white;
+                padding: 0 0.75rem;
+                font-size: 0.8rem;
+                color: var(--slate-400);
+            }
+
+        .signin-link {
+            text-align: center;
+            font-size: 0.875rem;
+            color: var(--slate-500);
+        }
+
+            .signin-link a {
+                color: var(--navy);
+                font-weight: 600;
+                text-decoration: none;
+            }
+
+                .signin-link a:hover {
+                    text-decoration: underline;
+                }
+
+        .password-hint {
+            font-size: 0.75rem;
+            color: var(--slate-400);
+            margin-top: 0.3rem;
+        }
+
+        .section-divider {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--slate-400);
+            margin: 1.5rem 0 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+            .section-divider::after {
+                content: '';
+                flex: 1;
+                height: 1px;
+                background: #e2e8f0;
+            }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <div class="hero-glow" aria-hidden="true"></div>
+        <div class="hero-icon-wrap" aria-hidden="true">
+            <i class="bi bi-mortarboard-fill"></i>
+        </div>
+        <h1 class="hero-title">Create Account</h1>
+        <p class="hero-sub">Set up your AI Academic Advisor account</p>
+    </div>
+
+    <div class="form-wrap">
+        <div class="form-card">
+            <h2 class="form-card-title">Get started</h2>
+            <p class="form-card-sub">Fill in your details to create your account</p>
+
+            @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+            {
+                <div class="alert alert-danger mb-3" role="alert" style="font-size:0.875rem; border-radius:10px;">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>@Model.ErrorMessage
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+            {
+                <div class="alert alert-success mb-3" role="alert" style="font-size:0.875rem; border-radius:10px;">
+                    <i class="bi bi-check-circle-fill me-2"></i>@Model.SuccessMessage
+                </div>
+            }
+
+            <form method="post" autocomplete="off">
+                <div class="section-divider">Personal Info</div>
+
+                <div class="field-row-2">
+                    <div>
+                        <label class="field-label" for="FirstName">First Name</label>
+                        <input asp-for="FirstName" id="FirstName" class="field-input" placeholder="First name" autofocus />
+                    </div>
+                    <div>
+                        <label class="field-label" for="LastName">Last Name</label>
+                        <input asp-for="LastName" id="LastName" class="field-input" placeholder="Last name" />
+                    </div>
+                </div>
+
+                <div class="field-row">
+                    <label class="field-label" for="StudentIDNumber">Student ID Number</label>
+                    <input asp-for="StudentIDNumber" id="StudentIDNumber" class="field-input" placeholder="e.g. 900123456" />
+                </div>
+
+                <div class="field-row">
+                    <label class="field-label" for="Email">Email Address</label>
+                    <input asp-for="Email" id="Email" type="email" class="field-input" placeholder="your@email.com" autocomplete="email" />
+                </div>
+
+                <div class="section-divider">Academic Info</div>
+
+                <div class="field-row">
+                    <label class="field-label" for="Major">Major</label>
+                    <input asp-for="Major" id="Major" class="field-input" placeholder="e.g. Computer Science Major, B.S." />
+                </div>
+
+                <div class="field-row-2">
+                    <div>
+                        <label class="field-label" for="EnrollmentYear">Enrollment Year</label>
+                        <input asp-for="EnrollmentYear" id="EnrollmentYear" type="number" class="field-input" placeholder="e.g. 2025" min="2000" max="2100" />
+                    </div>
+                    <div>
+                        <label class="field-label" for="EnrollmentStatus">Status</label>
+                        <select asp-for="EnrollmentStatus" id="EnrollmentStatus" class="field-input">
+                            <option value="Full-Time">Full-Time</option>
+                            <option value="Part-Time">Part-Time</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="section-divider">Password</div>
+
+                <div class="field-row">
+                    <label class="field-label" for="Password">Password</label>
+                    <input asp-for="Password" id="Password" type="password" class="field-input" placeholder="Create a password" autocomplete="new-password" />
+                    <p class="password-hint">At least 8 characters</p>
+                </div>
+
+                <div class="field-row">
+                    <label class="field-label" for="ConfirmPassword">Confirm Password</label>
+                    <input asp-for="ConfirmPassword" id="ConfirmPassword" type="password" class="field-input" placeholder="Repeat your password" autocomplete="new-password" />
+                </div>
+
+                <button type="submit" class="submit-btn">
+                    <i class="bi bi-person-plus-fill" aria-hidden="true"></i>
+                    Create Account
+                </button>
+            </form>
+
+            <div class="divider"><span>Already have an account?</span></div>
+            <div class="signin-link">
+                <a href="/Login"><i class="bi bi-box-arrow-in-right me-1"></i>Sign in instead</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
