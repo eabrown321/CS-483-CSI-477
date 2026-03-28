@@ -1,14 +1,9 @@
 ﻿using CS_483_CSI_477.Pages;
-<<<<<<< HEAD
 using Microsoft.AspNetCore.Http;
-=======
-using System.Runtime.Intrinsics.Arm;
->>>>>>> e316d47c9015c6fb5708110f0b70919944db7e21
 using System.Text.Json;
 
 namespace CS_483_CSI_477.Services
 {
-<<<<<<< HEAD
     public class ChatThreadInfo
     {
         public string ChatId { get; set; } = "";
@@ -32,14 +27,11 @@ namespace CS_483_CSI_477.Services
         public string Summary { get; set; } = "";
     }
 
-=======
->>>>>>> e316d47c9015c6fb5708110f0b70919944db7e21
     public interface IChatLogStore
     {
         Task<List<ChatMessage>> LoadAsync(string chatId);
         Task SaveAsync(string chatId, List<ChatMessage> messages);
         Task ClearAsync(string chatId);
-<<<<<<< HEAD
 
         Task<string> CreateChatAsync(int studentId, string? title = null);
         Task<List<ChatThreadInfo>> GetChatsForStudentAsync(int studentId);
@@ -48,14 +40,11 @@ namespace CS_483_CSI_477.Services
 
         Task<string?> GetSummaryAsync(int studentId, string chatId);
         Task SaveSummaryAsync(int studentId, string chatId, string summary);
-=======
->>>>>>> e316d47c9015c6fb5708110f0b70919944db7e21
     }
 
     public class FileChatLogStore : IChatLogStore
     {
         private readonly string _baseDir;
-<<<<<<< HEAD
         private readonly IHttpContextAccessor _httpContextAccessor;
         private static readonly SemaphoreSlim _semaphore = new(1, 1);
 
@@ -134,33 +123,11 @@ namespace CS_483_CSI_477.Services
 
             if (!File.Exists(path))
                 return new List<ChatMessage>();
-=======
-        private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
-
-        public FileChatLogStore(IWebHostEnvironment env)
-        {
-            _baseDir = Path.Combine(env.ContentRootPath, "App_Data", "ChatLogs");
-            Directory.CreateDirectory(_baseDir);
-        }
-
-        private string PathFor(string chatId) => Path.Combine(_baseDir, $"{chatId}.json");
-
-        public async Task<List<ChatMessage>> LoadAsync(string chatId)
-        {
-            var path = PathFor(chatId);
-            if (!File.Exists(path)) return new List<ChatMessage>();
->>>>>>> e316d47c9015c6fb5708110f0b70919944db7e21
 
             await _semaphore.WaitAsync();
             try
             {
-<<<<<<< HEAD
                 var json = await File.ReadAllTextAsync(path);
-=======
-                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-                using var reader = new StreamReader(stream);
-                var json = await reader.ReadToEndAsync();
->>>>>>> e316d47c9015c6fb5708110f0b70919944db7e21
                 return JsonSerializer.Deserialize<List<ChatMessage>>(json) ?? new List<ChatMessage>();
             }
             catch
@@ -175,19 +142,13 @@ namespace CS_483_CSI_477.Services
 
         public async Task SaveAsync(string chatId, List<ChatMessage> messages)
         {
-<<<<<<< HEAD
             var studentId = GetCurrentStudentId();
             var metaPath = MetaPath(studentId, chatId);
             var messagesPath = MessagesPath(studentId, chatId);
-=======
-            var path = PathFor(chatId);
-            var json = JsonSerializer.Serialize(messages, new JsonSerializerOptions { WriteIndented = true });
->>>>>>> e316d47c9015c6fb5708110f0b70919944db7e21
 
             await _semaphore.WaitAsync();
             try
             {
-<<<<<<< HEAD
                 Directory.CreateDirectory(ChatDir(studentId, chatId));
 
                 var json = JsonSerializer.Serialize(messages, JsonOptions);
@@ -207,11 +168,6 @@ namespace CS_483_CSI_477.Services
                     meta.Title = BuildTitle(messages);
 
                 await File.WriteAllTextAsync(metaPath, JsonSerializer.Serialize(meta, JsonOptions));
-=======
-                using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
-                using var writer = new StreamWriter(stream);
-                await writer.WriteAsync(json);
->>>>>>> e316d47c9015c6fb5708110f0b70919944db7e21
             }
             finally
             {
@@ -221,16 +177,11 @@ namespace CS_483_CSI_477.Services
 
         public async Task ClearAsync(string chatId)
         {
-<<<<<<< HEAD
             var studentId = GetCurrentStudentId();
-=======
-            var path = PathFor(chatId);
->>>>>>> e316d47c9015c6fb5708110f0b70919944db7e21
 
             await _semaphore.WaitAsync();
             try
             {
-<<<<<<< HEAD
                 var meta = await ReadMetaInternalAsync(studentId, chatId);
                 if (meta == null)
                     return;
@@ -276,11 +227,6 @@ namespace CS_483_CSI_477.Services
                         MessageCount = meta.MessageCount,
                         Summary = meta.Summary
                     });
-=======
-                if (File.Exists(path))
-                {
-                    File.Delete(path);
->>>>>>> e316d47c9015c6fb5708110f0b70919944db7e21
                 }
             }
             finally
@@ -288,7 +234,6 @@ namespace CS_483_CSI_477.Services
                 _semaphore.Release();
             }
 
-<<<<<<< HEAD
             return result
                 .OrderByDescending(c => c.UpdatedAt)
                 .ToList();
@@ -389,9 +334,6 @@ namespace CS_483_CSI_477.Services
             var text = firstUser.Content.Trim().Replace("\r", " ").Replace("\n", " ");
             text = text.Length <= 40 ? text : text[..40].Trim() + "...";
             return string.IsNullOrWhiteSpace(text) ? "New Chat" : text;
-=======
-            await Task.CompletedTask;
->>>>>>> e316d47c9015c6fb5708110f0b70919944db7e21
         }
     }
 }
