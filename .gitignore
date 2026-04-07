@@ -161,3 +161,4 @@ wwwroot/uploads/
 
 # Chat logs with potentially sensitive conversations
 App_Data/ChatLogs/
+publish/
